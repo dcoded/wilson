@@ -15,10 +15,12 @@ public:
 	~event ();
 
 	const std::string name () const;
-	void name (const std::string name);
+	virtual void name (const std::string name);
 
-	void subscribe (listener<T>* ln);
-	void publish (const T& message) const;
+	virtual void subscribe (listener<T>* ln);
+	virtual void publish (const T& message) const;
+
+	const std::vector <listener<T>*> listeners () const;
 };
 
 template <typename T>
@@ -50,4 +52,9 @@ template <typename T>
 void event<T>::publish (const T& message) const {
 	for (auto& listener : listeners_)
 		listener->recv (message, name_);
+}
+
+template <typename T>
+const std::vector<listener<T>*> event<T>::listeners () const {
+	return listeners_;
 }

@@ -21,16 +21,29 @@ struct message
 	std::string data;
 };
 
+struct rupdate
+{
+	int id;
+	std::map <int, double> routes;
+};
 
-class mote : public listener <message>
-           , public event <message> {
+
+class mote : public listener <message> , public event <message>
+           , public listener <rupdate> , public event <rupdate> {
 using Edge = std::tuple <int, int, double>;
 private:
 	point location_;
-	int id_;
+	int   id_;
 
-	std::map <int, int> next_;
+	std::map <int, int>    next_hop_;
+	std::map <int, double> distance_;
 public:
+	using event <message>::subscribe;
+	using event <rupdate>::subscribe;
+
+	using event <message>::publish;
+	using event <rupdate>::publish;
+
 	mote ();
 	mote (point location);
 
@@ -41,10 +54,11 @@ public:
 
 	void send (message msg);
 	void recv (const message msg, const std::string event_name);
-
-	const std::vector<mote*> get_listeners () const;
-
-	void update_routes (std::vector<mote>& motes, std::set<Edge> edges);
+	
+	void recv (const rupdate msg, const std::string event_name);
+	
+	void discover ();
+	void forward () const;
 };
 
 mote::mote ()
@@ -70,90 +84,144 @@ const int mote::id () const {
 
 void mote::id (const int id) {
 	id_ = id;
-	name (std::string("Channel [") + std::to_string(id) + "]");
+	this->event<message>::name (std::string("Channel [message,") + std::to_string(id) + "]");
+	this->event<rupdate>::name (std::string("Channel [rupdate,") + std::to_string(id) + "]");
 }
+
+
+
+
 
 void mote::recv (message msg, const std::string event_name)
 {
-	if (msg.dest == id ()) {
+	if (msg.dest == this->mote::id ()) {
 		std::cout
-			<< "[mote[" << id_ << "]::recv||" << event_name << "] "
+			<< "[mote[" << id_ << "]::recv(" << event_name << ")] "
 			<< "recieved data: " << msg.data << "\n";
 	}
 	else if (msg.next == id ()) {
 		std::cout 
-			<< "[mote[" << id_ << "]::recv||" << event_name << "] "
+			<< "[mote[" << id_ << "]::recv(" << event_name << ")] "
 			<< "forwarding to dest " << msg.dest << "\n";
-		publish (msg);
+		send (msg);
 	}
 	//add_noise (&bytes[0], bytes.size (), 0.5);
 }
 
+
+
+
+
+
+
+
+
 void mote::send (message msg) {
 
-	msg.next = next_[msg.dest];
-
-	if (msg.next < 0)
+	if (next_hop_.find (msg.dest) == next_hop_.end ())
+	{
 		std::cout
 			<< "[mote[" << id_ << "]::send] "
 			<< " cannot compute hop to destination " << msg.dest << "\n";
-	else {
+	}
+	else
+	{
+		msg.next = next_hop_[msg.dest];
 		std::cout
 			<< "[mote[" << id_ << "]::send] "
 			<< "(" << msg.source << "," << msg.next << "," << msg.dest << ")\n";
-
-		publish (msg); 
+		publish (msg);
 	}
 }
 
-const std::vector<mote*> mote::get_listeners () const {
-	std::vector <mote*> motes;
+void mote::recv (rupdate update, const std::string event_name) {
+	bool updated = false;
 
-	for (auto* listener : listeners_)
+	for (auto route : update.routes)
 	{
-		mote* mptr = reinterpret_cast <mote*> (listener);
-		motes.push_back (mptr);
-	}
+		   int neighbor = update.id;
+		   int endpoint = route.first;  // target ID
+		double distance = route.second; // distance from neighbor
 
-	return motes;
-}
+		if (distance_.find (endpoint) == distance_.end ()) {
+			// this mote doesn't know if this peer yet
+			distance_[endpoint] = distance + distance_[neighbor];
+			next_hop_[endpoint] = neighbor;
+			updated = true;
 
-void mote::update_routes (std::vector<mote>& motes, std::set<Edge> edges) {
-	std::cout << "[" << id () << "::update_routes]\n";
+			std::cout
+				<< "[+] " << id_ << " @ " << location_ << " -> " << endpoint
+				<< " via " << neighbor
+				<< " = "
+				<< distance_[neighbor] << "+" << distance << " = " << distance_[endpoint]
+				<< "\n";
+		}
+		else if (distance_[neighbor] + distance < distance_[endpoint]) {
+			// neighbor has a shorter path
+			distance_[endpoint] = distance + distance_[neighbor];
+			next_hop_[endpoint] = neighbor;
+			updated = true;
 
-	std::map<int,double> dist;
-
-	for (int i = 0; i < motes.size (); i++)
-	{
-		int nid = motes[i].id ();
-		if (nid == id ())
-			dist[nid] = 0;
-		else
-			dist[nid] = 0x0FFFFFFE;
-
-		next_[nid] = -1;
-	}
-
-	for (const mote& m : motes)
-	for (const Edge& e : edges)
-	{
-		int u,v,w;
-		std::tie (u,v,w) = e;
-
-		if (dist[u] + w < dist[v]) {
-			dist[v]  = dist[u] + w;
-			next_[v] = u;
+			std::cout
+				<< "[^] " << id_ << " @ " << location_ << " -> " << endpoint
+				<< " via " << neighbor
+				<< " = "
+				<< distance_[neighbor] << "+" << distance << " = " << distance_[endpoint]
+				<< "\n";
 		}
 	}
 
-	for (auto& entry : next_)
+	if (updated)
 	{
-		if (entry.second == id ())
-			entry.second = entry.first;
-
-		std::cout << "next[" << entry.first << "] = " << entry.second << "\n";
+		update.id = id_;
+		update.routes = distance_;
+		publish (update);
 	}
 }
+
+
+
+
+
+
+
+
+
+void mote::discover () {
+	// create list of neighbors
+	distance_.clear ();
+	next_hop_.clear ();
+
+	for (listener<message>* l : this->event<message>::listeners ())
+	{
+		mote* neighbor = static_cast <mote*> (l);
+		
+		distance_[neighbor->id ()] = location ().distance (neighbor->location ());
+		next_hop_[neighbor->id ()] = neighbor->id ();
+	}
+
+	distance_[id_] = 0;
+	next_hop_[id_] = id_;
+}
+
+void mote::forward () const {
+	// copy routing table
+	rupdate update;
+	update.id     = id_;
+	update.routes = distance_;
+
+	publish (update);
+}
+
+
+
+
+
+
+
+
+
+
 
 // void add_noise (uint8_t* data, size_t len, double probability)
 // {	
