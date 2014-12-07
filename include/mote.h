@@ -26,14 +26,15 @@ struct message : public transmission {
     std::string data;
 };
 
-struct rupdate {
+// r update = routing update
+struct routing {
     int id;
     std::map <int, double> routes;
 };
 
 
 class mote : public listener <message> , public event <message>
-           , public listener <rupdate> , public event <rupdate> {
+           , public listener <routing> , public event <routing> {
 
 private:
     point location_;
@@ -43,10 +44,10 @@ private:
     std::map <int, double> distance_;
 public:
     using event <message>::subscribe;
-    using event <rupdate>::subscribe;
+    using event <routing>::subscribe;
 
     using event <message>::publish;
-    using event <rupdate>::publish;
+    using event <routing>::publish;
 
     mote (); // creates a random location
     mote (point location);
@@ -65,7 +66,7 @@ public:
     void recv (const message msg, const std::string event_name);
 
     // listen for routing table updates
-    void recv (const rupdate msg, const std::string event_name);
+    void recv (const routing msg, const std::string event_name);
     
     // initialize routing table
     void discover ();
@@ -107,7 +108,7 @@ const int   mote::id () const { return id_; }
 void mote::id (const int id) {
     id_ = id;
     this->event<message>::name (std::string("Channel [message,") + std::to_string(id) + "]");
-    this->event<rupdate>::name (std::string("Channel [rupdate,") + std::to_string(id) + "]");
+    this->event<routing>::name (std::string("Channel [routing,") + std::to_string(id) + "]");
 }
 
 
@@ -119,7 +120,7 @@ void mote::id (const int id) {
  */
 void mote::subscribe (mote& neighbor) {
     subscribe (static_cast<listener<message>*>(&neighbor));
-    subscribe (static_cast<listener<rupdate>*>(&neighbor));
+    subscribe (static_cast<listener<routing>*>(&neighbor));
 }
 
 
@@ -174,7 +175,7 @@ void mote::send (message msg, const int destination) {
 /**
  * Routing Layer Message Handlers
  */
-void mote::recv (rupdate update, const std::string event_name) {
+void mote::recv (routing update, const std::string event_name) {
     bool updated = false;
 
     for (auto route : update.routes)
@@ -238,7 +239,7 @@ void mote::discover () {
  */
 void mote::invocate () const {
     // copy routing table
-    rupdate update;
+    routing update;
     update.id     = id_;
     update.routes = distance_;
 
