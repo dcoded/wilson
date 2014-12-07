@@ -16,13 +16,15 @@ std::random_device rd;
 std::default_random_engine e1 (rd ());
 
 //using message = std::string;
-struct message
+struct transmission
 {
     int source;
     int next;
     int dest;
+};
 
-    std::string data;
+struct message : public transmission {
+	std::string data;
 };
 
 struct rupdate
@@ -34,7 +36,7 @@ struct rupdate
 
 class mote : public listener <message> , public event <message>
            , public listener <rupdate> , public event <rupdate> {
-using Edge = std::tuple <int, int, double>;
+
 private:
     point location_;
     int   id_;
