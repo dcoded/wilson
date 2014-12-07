@@ -46,10 +46,10 @@ int main(int argc, char** argv)
 
     auto summation = [] (const int a, const int b) { return a + b; };
 
-    aggregate_metric<int> (sent_bits, motes.begin (), motes.end (), "sent_bits", summation);
-    aggregate_metric<int> (recv_bits, motes.begin (), motes.end (), "recv_bits", summation);
-    aggregate_metric<int> (sent_msgs, motes.begin (), motes.end (), "sent_messages", summation);
-    aggregate_metric<int> (recv_msgs, motes.begin (), motes.end (), "recv_messages", summation);
+    aggregate_metric<int> (motes.begin (), motes.end (), sent_bits, "sent_bits", summation);
+    aggregate_metric<int> (motes.begin (), motes.end (), recv_bits, "recv_bits", summation);
+    aggregate_metric<int> (motes.begin (), motes.end (), sent_msgs, "sent_messages", summation);
+    aggregate_metric<int> (motes.begin (), motes.end (), recv_msgs, "recv_messages", summation);
 
     std::cout << "Bits Sent: " << sent_bits << "\n";
     std::cout << "Bits Recv: " << recv_bits << "\n";
