@@ -31,15 +31,22 @@ int main(int argc, char** argv)
         }
     }
 
+    // create routing tables
     for (mote& m : motes) m.discover ();
     for (mote& m : motes) m.invocate ();
 
+    // make a test message!
     message test;
     test.data = "Hello World!";
 
     // 0x0004 is the destination address
     motes[1].send (test, 0x0004);
 
+
+
+    /*
+        Below are some basic metrics to identify transmission performance
+    */
     int sent_bits = 0;
     int recv_bits = 0;
     int sent_msgs = 0;
