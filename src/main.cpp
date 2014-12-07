@@ -40,7 +40,10 @@ int main(int argc, char** argv)
     for (mote& m : motes) m.discover ();
     for (mote& m : motes) m.invocate ();
 
-    motes[1].send ({ 0x0001, -1, 0x004, "test"});
+    message test;
+    test.data = "Hello World!";
+
+    motes[1].send (test, 0x0004);
 
     std::cout << std::endl;
 }

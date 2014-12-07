@@ -16,19 +16,17 @@ std::random_device rd;
 std::default_random_engine e1 (rd ());
 
 //using message = std::string;
-struct transmission
-{
+struct transmission {
     int source;
     int next;
     int dest;
 };
 
 struct message : public transmission {
-	std::string data;
+    std::string data;
 };
 
-struct rupdate
-{
+struct rupdate {
     int id;
     std::map <int, double> routes;
 };
@@ -63,7 +61,7 @@ public:
     void subscribe (mote& neighbor);
 
     // send/recv an application message to/from another mote in the network
-    void send (message msg);
+    void send (message msg, const int destination);
     void recv (const message msg, const std::string event_name);
 
     // listen for routing table updates
@@ -141,12 +139,15 @@ void mote::recv (message msg, const std::string event_name) {
         std::cout 
             << "[mote[" << id_ << "]::recv(" << event_name << ")] "
             << "forwarding to dest " << msg.dest << "\n";
-        send (msg);
+        send (msg, msg.dest);
     }
     //add_noise (&bytes[0], bytes.size (), 0.5);
 }
 
-void mote::send (message msg) {
+void mote::send (message msg, const int destination) {
+    msg.source = id_;
+    msg.dest   = destination;
+
     if (next_hop_.find (msg.dest) == next_hop_.end ()) {
         // we cannot find a neighbor who knows of the destination
         std::cout
@@ -155,6 +156,7 @@ void mote::send (message msg) {
     } else {
         // update the message to notify correct neighbor (next)
         msg.next = next_hop_[msg.dest];
+
         std::cout
             << "[mote[" << id_ << "]::send] "
             << "(" << msg.source << "," << msg.next << "," << msg.dest << ")"
