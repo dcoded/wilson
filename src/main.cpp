@@ -3,12 +3,24 @@
 
 int main(int argc, char** argv)
 {
-    const int COUNT_MOTES    = 32;
-    const int RADIO_STRENGTH = 15;
+    /*
+        SIMULATION SETTINGS
+
+        Note: Networks are randomly generated and those with a high SPACE_SIZE
+              and/or low COUNT_MOTES or RADIO_STRENGTH will increase the
+              likelyhood of an isolated node.
+    */
+    const int SPACE_SIZE     = 100; // size of area sensors can be placed (NxN)
+    const int COUNT_MOTES    = 32; // # of sensors around
+    const int RADIO_STRENGTH = 30; // how far a sensor can communicate
 
 
+    std::vector <mote> motes;
 
-    std::vector <mote> motes (COUNT_MOTES);
+    // place sensors in random locations
+    for (int i = 0; i < COUNT_MOTES; i++) {
+        motes.push_back (SPACE_SIZE);
+    }
 
     // assign IDs/addresses
     for (int i = 0; i < motes.size (); i++) {
