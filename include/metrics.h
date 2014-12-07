@@ -19,16 +19,11 @@ public:
 };
 
 template <typename T, typename Iter>
-const T aggregate_metric (const Iter begin, const Iter end, std::string name, T initial,
+void aggregate_metric (T& agg, const Iter begin, const Iter end, std::string name,
     std::function<const T(const T,const T)> transform) {
 
-    T agg = initial;
-
-    for (auto it = begin; it != end; it++) {
+    for (auto it = begin; it != end; it++)
         agg = transform (agg, it->metric (name));
-    }
-
-    return agg;
 }
 
 #endif

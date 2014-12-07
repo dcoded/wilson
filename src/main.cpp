@@ -39,17 +39,17 @@ int main(int argc, char** argv)
 
     motes[1].send (test, 0x0004);
 
-    int sent_bits = aggregate_metric<int> (motes.begin (), motes.end (), "sent_bits", 0,
-    [] (const int a, const int b) { return a + b; });
+    int sent_bits = 0;
+    int recv_bits = 0;
+    int sent_msgs = 0;
+    int recv_msgs = 0;
 
-    int recv_bits = aggregate_metric<int> (motes.begin (), motes.end (), "recv_bits", 0,
-    [] (const int a, const int b) { return a + b; });
+    auto summation = [] (const int a, const int b) { return a + b; };
 
-    int sent_msgs = aggregate_metric<int> (motes.begin (), motes.end (), "sent_messages", 0,
-    [] (const int a, const int b) { return a + b; });
-
-    int recv_msgs = aggregate_metric<int> (motes.begin (), motes.end (), "recv_messages", 0,
-    [] (const int a, const int b) { return a + b; });
+    aggregate_metric<int> (sent_bits, motes.begin (), motes.end (), "sent_bits", summation);
+    aggregate_metric<int> (recv_bits, motes.begin (), motes.end (), "recv_bits", summation);
+    aggregate_metric<int> (sent_msgs, motes.begin (), motes.end (), "sent_messages", summation);
+    aggregate_metric<int> (recv_msgs, motes.begin (), motes.end (), "recv_messages", summation);
 
     std::cout << "Bits Sent: " << sent_bits << "\n";
     std::cout << "Bits Recv: " << recv_bits << "\n";
