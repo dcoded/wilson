@@ -6,7 +6,7 @@
 
 template <typename T>
 class event {
-private:
+protected:
 	std::string name_;
 	std::vector <listener<T>*> listeners_;
 public:
