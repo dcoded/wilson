@@ -129,8 +129,7 @@ void mote::subscribe (mote& neighbor) {
 /**
  * Application Message Handlers
  */
-void mote::recv (message msg, const std::string event_name)
-{
+void mote::recv (message msg, const std::string event_name) {
     if (msg.dest == this->mote::id ()) {
         std::cout
             << "[mote[" << id_ << "]::recv(" << event_name << ")] "
