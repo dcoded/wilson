@@ -38,5 +38,26 @@ int main(int argc, char** argv)
     test.data = "Hello World!";
 
     motes[1].send (test, 0x0004);
+
+    int sent_bits_total = 0;
+    int recv_bits_total = 0;
+
+    int sent_msgs_total = 0;
+    int recv_msgs_total = 0;
+
+    for (mote m : motes) sent_bits_total += m.metric ("sent_bits");
+    for (mote m : motes) recv_bits_total += m.metric ("recv_bits");
+
+    for (mote m : motes) sent_msgs_total += m.metric ("sent_messages");
+    for (mote m : motes) recv_msgs_total += m.metric ("recv_messages");
+
+
+
+    std::cout << "Bits Sent: " << sent_bits_total << "\n";
+    std::cout << "Bits Recv: " << recv_bits_total << "\n";
+
+    std::cout << "Msgs Sent: " << sent_msgs_total << "\n";
+    std::cout << "Msgs Recv: " << recv_msgs_total << "\n";
+
     std::cout << std::endl;
 }
