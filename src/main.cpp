@@ -1,4 +1,5 @@
 #include <iostream>
+#include <algorithm>
 #include <mote.h>
 
 int main(int argc, char** argv)

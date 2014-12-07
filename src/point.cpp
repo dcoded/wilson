@@ -1,5 +1,7 @@
+#include <iterator>
+#include <iostream>
 #include <point.h>
-
+#include <algorithm>
 
 point::point() {}
 
