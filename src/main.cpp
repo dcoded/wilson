@@ -3,15 +3,17 @@
 
 int main(int argc, char** argv)
 {
+    const int COUNT_MOTES    = 32;
     const int RADIO_STRENGTH = 15;
 
-    std::vector <mote> motes (8);
 
+
+    std::vector <mote> motes (COUNT_MOTES);
+
+    // assign IDs/addresses
     for (int i = 0; i < motes.size (); i++) {
         motes[i].id (i);
     }
-
-
 
     // initialize pub/sub for two motes if Euclidian distance < RADIO_STRENGTH
     for (int i = 0; i < motes.size (); i++)
