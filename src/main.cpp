@@ -37,6 +37,7 @@ int main(int argc, char** argv)
     message test;
     test.data = "Hello World!";
 
+    // 0x0004 is the destination address
     motes[1].send (test, 0x0004);
 
     int sent_bits = 0;
