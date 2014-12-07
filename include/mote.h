@@ -15,16 +15,31 @@
 std::random_device rd;
 std::default_random_engine e1 (rd ());
 
+void add_noise (uint8_t* data, size_t len, double probability) {    
+    std::uniform_int_distribution <int> dist (0, 0xFFFFFFFF);
+
+    for (int i = 0; i < len; i++)
+    for (int j = 0; j < 8; j++)
+    {
+        if (dist (e1) <= probability * 0xFFFFFFFF)
+            data[i] ^= (1 << j);
+    }
+}
+
 //using message = std::string;
 struct transmission {
     int source;
-    int next;
     int dest;
+
+    int next;
+    int prev;
 };
 
 struct message : public transmission {
     std::string data;
 };
+
+struct confirm : public transmission {};
 
 // r update = routing update
 struct routing {
@@ -34,7 +49,8 @@ struct routing {
 
 
 class mote : public listener <message> , public event <message>
-           , public listener <routing> , public event <routing> {
+           , public listener <routing> , public event <routing>
+           , public listener <confirm> , public event <confirm> {
 
 private:
     point location_;
@@ -45,9 +61,11 @@ private:
 public:
     using event <message>::subscribe;
     using event <routing>::subscribe;
+    using event <confirm>::subscribe;
 
     using event <message>::publish;
     using event <routing>::publish;
+    using event <confirm>::publish;
 
     mote (); // creates a random location
     mote (point location);
@@ -67,6 +85,9 @@ public:
 
     // listen for routing table updates
     void recv (const routing msg, const std::string event_name);
+
+    // listen for transmission acknowledgements
+    void recv (const confirm msg, const std::string event_name);
     
     // initialize routing table
     void discover ();
@@ -109,6 +130,7 @@ void mote::id (const int id) {
     id_ = id;
     this->event<message>::name (std::string("Channel [message,") + std::to_string(id) + "]");
     this->event<routing>::name (std::string("Channel [routing,") + std::to_string(id) + "]");
+    this->event<confirm>::name (std::string("Channel [confirm,") + std::to_string(id) + "]");
 }
 
 
@@ -121,6 +143,7 @@ void mote::id (const int id) {
 void mote::subscribe (mote& neighbor) {
     subscribe (static_cast<listener<message>*>(&neighbor));
     subscribe (static_cast<listener<routing>*>(&neighbor));
+    subscribe (static_cast<listener<confirm>*>(&neighbor));
 }
 
 
@@ -131,18 +154,41 @@ void mote::subscribe (mote& neighbor) {
  * Application Message Handlers
  */
 void mote::recv (message msg, const std::string event_name) {
+
+    add_noise (reinterpret_cast <uint8_t*> (&msg), sizeof (transmission), 0.5);
+
+
     if (msg.dest == this->mote::id ()) {
         std::cout
             << "[mote[" << id_ << "]::recv(" << event_name << ")] "
             << "recieved data: " << msg.data << "\n";
+
+        // send acknowledgement/confirmation
+        confirm ack;
+        {
+            ack.source = id_;
+            ack.dest   = msg.prev;
+            ack.next   = next_hop_[msg.source];
+            ack.prev   = id_;
+        }
+        publish (ack);
     }
     else if (msg.next == id ()) {
         std::cout 
             << "[mote[" << id_ << "]::recv(" << event_name << ")] "
             << "forwarding to dest " << msg.dest << "\n";
         send (msg, msg.dest);
+
+        // send acknowledgement/confirmation
+        confirm ack;
+        {
+            ack.source = id_;
+            ack.dest   = msg.prev;
+            ack.next   = next_hop_[msg.source];
+            ack.prev   = id_;
+        }
+        publish (ack);
     }
-    //add_noise (&bytes[0], bytes.size (), 0.5);
 }
 
 void mote::send (message msg, const int destination) {
@@ -157,6 +203,7 @@ void mote::send (message msg, const int destination) {
     } else {
         // update the message to notify correct neighbor (next)
         msg.next = next_hop_[msg.dest];
+        msg.prev = id_;
 
         std::cout
             << "[mote[" << id_ << "]::send] "
@@ -200,7 +247,7 @@ void mote::recv (routing update, const std::string event_name) {
 
     // if a change has occurred, propagate table to neighbors
     if (updated) {
-        update.id = id_;
+        update.id     = id_;
         update.routes = distance_;
         publish (update);
     }
@@ -208,6 +255,12 @@ void mote::recv (routing update, const std::string event_name) {
 
 
 
+void mote::recv (const confirm msg, const std::string event_name) {
+    if (msg.dest == id ())
+        std::cout
+            << "[mote[" << id_ << "]::recv(" << event_name << ")] "
+            << "recieved confirm: " << msg.source << "\n";
+}
 
 
 
@@ -247,22 +300,3 @@ void mote::invocate () const {
 }
 
 #endif
-
-
-
-
-
-
-// void add_noise (uint8_t* data, size_t len, double probability)
-// {    
-//     std::uniform_int_distribution <int> dist (0, 0xFFFFFFFF);
-
-//     for (int i = 0; i < len; i++)
-//     for (int j = 0; j < 8; j++)
-//     {
-//         if (dist (e1) <= probability * 0xFFFFFFFF)
-//         {
-//             data[i] ^= (1 << j);
-//         }
-//     }
-// }

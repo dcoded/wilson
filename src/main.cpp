@@ -7,8 +7,7 @@ int main(int argc, char** argv)
 
     std::vector <mote> motes (8);
 
-    for (int i = 0; i < motes.size (); i++)
-    {
+    for (int i = 0; i < motes.size (); i++) {
         motes[i].id (i);
     }
 
@@ -32,11 +31,6 @@ int main(int argc, char** argv)
         }
     }
 
-    // std::set<Edge> edges = discover_edges (motes);
-    // for (mote& m : motes)
-    //     m.update_routes (motes, edges);
-
-
     for (mote& m : motes) m.discover ();
     for (mote& m : motes) m.invocate ();
 
@@ -44,6 +38,5 @@ int main(int argc, char** argv)
     test.data = "Hello World!";
 
     motes[1].send (test, 0x0004);
-
     std::cout << std::endl;
 }
