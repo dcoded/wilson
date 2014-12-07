@@ -49,6 +49,24 @@ struct routing {
     std::map <int, double> routes;
 };
 
+struct tcplite {
+    uint16_t source;
+    uint16_t dest;
+    uint16_t length;
+    uint16_t checksum;
+
+    std::string data;
+};
+
+struct tcp {
+    uint32_t source;
+    uint32_t dest;
+    uint32_t length;
+    uint32_t checksum;
+
+    std::string data;
+};
+
 
 class mote : public listener <message> , public event <message>
            , public listener <routing> , public event <routing>
@@ -70,7 +88,7 @@ public:
     using event <routing>::publish;
     using event <confirm>::publish;
 
-    mote (); // creates a random location
+    mote (int area_side_length); // creates a random location
     mote (point location);
 
     const point location () const;
@@ -107,8 +125,8 @@ public:
 /**
  * Constructors
  */
-mote::mote () {
-    std::uniform_int_distribution <int> dist (0, 32);
+mote::mote (int area_side_length) {
+    std::uniform_int_distribution <int> dist (0, area_side_length);
     
     int x = dist (e1);
     int y = dist (e1);

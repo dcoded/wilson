@@ -19,7 +19,7 @@ int main(int argc, char** argv)
 
     // place sensors in random locations
     for (int i = 0; i < COUNT_MOTES; i++) {
-        motes.push_back (SPACE_SIZE);
+        motes.push_back (mote(SPACE_SIZE));
     }
 
     // assign IDs/addresses
