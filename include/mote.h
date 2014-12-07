@@ -16,12 +16,13 @@ std::random_device rd;
 std::default_random_engine e1 (rd ());
 
 void add_noise (uint8_t* data, size_t len, double probability) {    
-    std::uniform_int_distribution <int> dist (0, 0xFFFFFFFF);
+    std::uniform_int_distribution <int> dist (0, 0x7FFFFFFF);
 
     for (int i = 0; i < len; i++)
     for (int j = 0; j < 8; j++)
     {
-        if (dist (e1) <= probability * 0xFFFFFFFF)
+        int random_number = dist (e1);
+        if (random_number < probability * 0xFFFFFFFF)
             data[i] ^= (1 << j);
     }
 }
@@ -155,22 +156,23 @@ void mote::subscribe (mote& neighbor) {
  */
 void mote::recv (message msg, const std::string event_name) {
 
-    add_noise (reinterpret_cast <uint8_t*> (&msg), sizeof (transmission), 0.5);
+    // last arg is a percentage from 0.0 to 1.0
+    add_noise (reinterpret_cast <uint8_t*> (&msg), sizeof (transmission), 0.0);
 
+    // create (but dont send yet) acknowledgement/confirmation
+    confirm ack;
+    {
+        ack.source = id_;
+        ack.dest   = msg.prev;
+        ack.next   = next_hop_[msg.source];
+        ack.prev   = id_;
+    }
 
     if (msg.dest == this->mote::id ()) {
         std::cout
             << "[mote[" << id_ << "]::recv(" << event_name << ")] "
             << "recieved data: " << msg.data << "\n";
 
-        // send acknowledgement/confirmation
-        confirm ack;
-        {
-            ack.source = id_;
-            ack.dest   = msg.prev;
-            ack.next   = next_hop_[msg.source];
-            ack.prev   = id_;
-        }
         publish (ack);
     }
     else if (msg.next == id ()) {
@@ -178,15 +180,6 @@ void mote::recv (message msg, const std::string event_name) {
             << "[mote[" << id_ << "]::recv(" << event_name << ")] "
             << "forwarding to dest " << msg.dest << "\n";
         send (msg, msg.dest);
-
-        // send acknowledgement/confirmation
-        confirm ack;
-        {
-            ack.source = id_;
-            ack.dest   = msg.prev;
-            ack.next   = next_hop_[msg.source];
-            ack.prev   = id_;
-        }
         publish (ack);
     }
 }
