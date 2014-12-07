@@ -10,6 +10,7 @@
 #include <event.h>
 #include <point.h>
 #include <listener.h>
+#include <metrics.h>
 
 // Seed with a real random value, if available
 std::random_device rd;
@@ -51,7 +52,8 @@ struct routing {
 
 class mote : public listener <message> , public event <message>
            , public listener <routing> , public event <routing>
-           , public listener <confirm> , public event <confirm> {
+           , public listener <confirm> , public event <confirm>
+           , public metric_source<int> {
 
 private:
     point location_;
@@ -111,11 +113,23 @@ mote::mote () {
     int x = dist (e1);
     int y = dist (e1);
 
-    location_ = point {x,y};    
+    location_ = point {x,y};   
+
+    define_metric ("sent_bits", 0);
+    define_metric ("recv_bits", 0);
+
+    define_metric ("sent_messages", 0);
+    define_metric ("recv_messages", 0);
 }
 
 mote::mote (point location) 
-: location_ (location) {}
+: location_ (location) {
+    define_metric ("sent_bits", 0);
+    define_metric ("recv_bits", 0);
+
+    define_metric ("sent_messages", 0);
+    define_metric ("recv_messages", 0);
+}
 
 
 
@@ -155,7 +169,6 @@ void mote::subscribe (mote& neighbor) {
  * Application Message Handlers
  */
 void mote::recv (message msg, const std::string event_name) {
-
     // last arg is a percentage from 0.0 to 1.0
     add_noise (reinterpret_cast <uint8_t*> (&msg), sizeof (transmission), 0.0);
 
@@ -173,12 +186,19 @@ void mote::recv (message msg, const std::string event_name) {
             << "[mote[" << id_ << "]::recv(" << event_name << ")] "
             << "recieved data: " << msg.data << "\n";
 
+        metric ("recv_bits")     += (sizeof (transmission) + msg.data.size ()) * 8;
+        metric ("recv_messages") ++;
+
         publish (ack);
     }
     else if (msg.next == id ()) {
         std::cout 
             << "[mote[" << id_ << "]::recv(" << event_name << ")] "
             << "forwarding to dest " << msg.dest << "\n";
+
+        metric ("recv_bits")     += (sizeof (transmission) + msg.data.size ()) * 8;
+        metric ("recv_messages") ++;
+
         send (msg, msg.dest);
         publish (ack);
     }
@@ -204,6 +224,8 @@ void mote::send (message msg, const int destination) {
             << "\n";
 
         // pass it on
+        metric ("sent_bits") += (sizeof (transmission) + msg.data.size ()) * 8;
+        metric ("sent_messages") ++;
         publish (msg);
     }
 }
