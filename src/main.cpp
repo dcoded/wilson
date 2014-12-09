@@ -1,6 +1,7 @@
 #include <iostream>
-#include <algorithm>
-#include <mote.h>
+#include <tcp_mote.h>
+
+
 
 int main(int argc, char** argv)
 {
@@ -11,16 +12,17 @@ int main(int argc, char** argv)
               and/or low COUNT_MOTES or RADIO_STRENGTH will increase the
               likelyhood of an isolated node.
     */
-    const int SPACE_SIZE     = 100; // size of area sensors can be placed (NxN)
-    const int COUNT_MOTES    = 32; // # of sensors around
+    /** 10,5,4 showed that sent==recv */
+    const int SPACE_SIZE     = 128; // size of area sensors can be placed (NxN)
+    const int COUNT_MOTES    = 64; // # of sensors around
     const int RADIO_STRENGTH = 30; // how far a sensor can communicate
 
 
-    std::vector <mote> motes;
+    std::vector <tcp_mote> motes;
 
     // place sensors in random locations
     for (int i = 0; i < COUNT_MOTES; i++) {
-        motes.push_back (mote(SPACE_SIZE));
+        motes.push_back (tcp_mote(SPACE_SIZE));
     }
 
     // assign IDs/addresses
@@ -47,15 +49,27 @@ int main(int argc, char** argv)
     }
 
     // create routing tables
-    for (mote& m : motes) m.discover ();
-    for (mote& m : motes) m.invocate ();
+    std::cout << "Detecting neighbors...\n";
+    for (auto& mote : motes) mote.discover ();
+
+    std::cout << "Setting up DV routing tables...\n";
+    for (auto& mote : motes) mote.invocate ();
 
     // make a test message!
-    message test;
-    test.data = "Hello World!";
 
     // 0x0004 is the destination address
-    motes[1].send (test, 0x0004);
+    for (int i = 0; i < motes.size (); i++)
+    for (int j = 0; j < motes.size (); j++) {
+        if (i == j) continue;
+
+        std::stringstream ss;
+        ss << "Hi " << j << " I'm  " << i;
+
+        message test;
+        test.data = ss.str ();
+
+        motes[i].send (test, motes[j].id ());
+    }
 
 
 

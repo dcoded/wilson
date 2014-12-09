@@ -37,40 +37,38 @@ struct transmission {
     int prev;
 };
 
-struct message : public transmission {
-    std::string data;
-};
-
-struct confirm : public transmission {};
-
 // r update = routing update
 struct routing {
     int id;
     std::map <int, double> routes;
 };
 
-struct tcplite {
-    uint16_t source;
-    uint16_t dest;
-    uint16_t length;
-    uint16_t checksum;
+// struct message : public transmission {
+//     std::string data;
+// };
 
-    std::string data;
-};
+// struct tcplite {
+//     uint16_t source;
+//     uint16_t dest;
+//     uint16_t length;
+//     uint16_t checksum;
 
-struct tcp {
-    uint32_t source;
-    uint32_t dest;
-    uint32_t length;
-    uint32_t checksum;
+//     std::string data;
+// };
 
-    std::string data;
-};
+// struct tcp {
+//     uint32_t source;
+//     uint32_t dest;
+//     uint32_t length;
+//     uint32_t checksum;
 
+//     std::string data;
+// };
 
-class mote : public listener <message> , public event <message>
+template <class Protocol>
+class mote : public listener <Protocol>, public event <Protocol>
            , public listener <routing> , public event <routing>
-           , public listener <confirm> , public event <confirm>
+           //, public listener <confirm> , public event <confirm>
            , public metric_source<int> {
 
 private:
@@ -80,13 +78,13 @@ private:
     std::map <int, int>    next_hop_;
     std::map <int, double> distance_;
 public:
-    using event <message>::subscribe;
+    using event <Protocol>::subscribe;
     using event <routing>::subscribe;
-    using event <confirm>::subscribe;
+    //using event <confirm>::subscribe;
 
-    using event <message>::publish;
+    using event <Protocol>::publish;
     using event <routing>::publish;
-    using event <confirm>::publish;
+    //using event <confirm>::publish;
 
     mote (int area_side_length); // creates a random location
     mote (point location);
@@ -100,21 +98,20 @@ public:
     // allows neighbors to "hear" radio broadcasts
     void subscribe (mote& neighbor);
 
-    // send/recv an application message to/from another mote in the network
-    void send (message msg, const int destination);
-    void recv (const message msg, const std::string event_name);
-
-    // listen for routing table updates
-    void recv (const routing msg, const std::string event_name);
-
-    // listen for transmission acknowledgements
-    void recv (const confirm msg, const std::string event_name);
-    
     // initialize routing table
     void discover ();
 
     // broadcast routing table to network
     void invocate () const;
+
+    const int next_hop (const int address);
+
+private:
+    // listen for routing table updates
+    virtual void recv (const routing msg, const std::string event_name);
+
+    // listen for transmission acknowledgements
+    // virtual void recv (const confirm msg, const std::string event_name);
 };
 
 
@@ -125,7 +122,8 @@ public:
 /**
  * Constructors
  */
-mote::mote (int area_side_length) {
+template <class Protocol>
+mote<Protocol>::mote (int area_side_length) {
     std::uniform_int_distribution <int> dist (0, area_side_length);
     
     int x = dist (e1);
@@ -140,7 +138,8 @@ mote::mote (int area_side_length) {
     define_metric ("recv_messages", 0);
 }
 
-mote::mote (point location) 
+template <class Protocol>
+mote<Protocol>::mote (point location) 
 : location_ (location) {
     define_metric ("sent_bits", 0);
     define_metric ("recv_bits", 0);
@@ -156,14 +155,18 @@ mote::mote (point location)
 /**
  * Field Access
  */
-const point mote::location () const { return location_; }
-const int   mote::id () const { return id_; }
+template <class Protocol>
+const point mote<Protocol>::location () const { return location_; }
 
-void mote::id (const int id) {
+template <class Protocol>
+const int   mote<Protocol>::id () const { return id_; }
+
+template <class Protocol>
+void mote<Protocol>::id (const int id) {
     id_ = id;
-    this->event<message>::name (std::string("Channel [message,") + std::to_string(id) + "]");
+    this->event<Protocol>::name (std::string("Channel [message,") + std::to_string(id) + "]");
     this->event<routing>::name (std::string("Channel [routing,") + std::to_string(id) + "]");
-    this->event<confirm>::name (std::string("Channel [confirm,") + std::to_string(id) + "]");
+    //this->event<confirm>::name (std::string("Channel [confirm,") + std::to_string(id) + "]");
 }
 
 
@@ -173,80 +176,15 @@ void mote::id (const int id) {
  * Subscribe neighbors (listeners) to both an application message handler
  * and a routing message handler.
  */
-void mote::subscribe (mote& neighbor) {
-    subscribe (static_cast<listener<message>*>(&neighbor));
+template <class Protocol>
+void mote<Protocol>::subscribe (mote& neighbor) {
+    subscribe (static_cast<listener<Protocol>*>(&neighbor));
     subscribe (static_cast<listener<routing>*>(&neighbor));
-    subscribe (static_cast<listener<confirm>*>(&neighbor));
+    //subscribe (static_cast<listener<confirm>*>(&neighbor));
 }
 
 
 
-
-
-/**
- * Application Message Handlers
- */
-void mote::recv (message msg, const std::string event_name) {
-    // last arg is a percentage from 0.0 to 1.0
-    add_noise (reinterpret_cast <uint8_t*> (&msg), sizeof (transmission), 0.0);
-
-    // create (but dont send yet) acknowledgement/confirmation
-    confirm ack;
-    {
-        ack.source = id_;
-        ack.dest   = msg.prev;
-        ack.next   = next_hop_[msg.source];
-        ack.prev   = id_;
-    }
-
-    if (msg.dest == this->mote::id ()) {
-        std::cout
-            << "[mote[" << id_ << "]::recv(" << event_name << ")] "
-            << "recieved data: " << msg.data << "\n";
-
-        metric ("recv_bits")     += (sizeof (transmission) + msg.data.size ()) * 8;
-        metric ("recv_messages") ++;
-
-        publish (ack);
-    }
-    else if (msg.next == id ()) {
-        std::cout 
-            << "[mote[" << id_ << "]::recv(" << event_name << ")] "
-            << "forwarding to dest " << msg.dest << "\n";
-
-        metric ("recv_bits")     += (sizeof (transmission) + msg.data.size ()) * 8;
-        metric ("recv_messages") ++;
-
-        send (msg, msg.dest);
-        publish (ack);
-    }
-}
-
-void mote::send (message msg, const int destination) {
-    msg.source = id_;
-    msg.dest   = destination;
-
-    if (next_hop_.find (msg.dest) == next_hop_.end ()) {
-        // we cannot find a neighbor who knows of the destination
-        std::cout
-            << "[mote[" << id_ << "]::send] "
-            << " cannot compute hop to destination " << msg.dest << "\n";
-    } else {
-        // update the message to notify correct neighbor (next)
-        msg.next = next_hop_[msg.dest];
-        msg.prev = id_;
-
-        std::cout
-            << "[mote[" << id_ << "]::send] "
-            << "(" << msg.source << "," << msg.next << "," << msg.dest << ")"
-            << "\n";
-
-        // pass it on
-        metric ("sent_bits") += (sizeof (transmission) + msg.data.size ()) * 8;
-        metric ("sent_messages") ++;
-        publish (msg);
-    }
-}
 
 
 
@@ -255,7 +193,8 @@ void mote::send (message msg, const int destination) {
 /**
  * Routing Layer Message Handlers
  */
-void mote::recv (routing update, const std::string event_name) {
+template <class Protocol>
+void mote<Protocol>::recv (const routing update, const std::string event_name) {
     bool updated = false;
 
     for (auto route : update.routes)
@@ -280,20 +219,21 @@ void mote::recv (routing update, const std::string event_name) {
 
     // if a change has occurred, propagate table to neighbors
     if (updated) {
-        update.id     = id_;
-        update.routes = distance_;
-        publish (update);
+        routing forward;
+        forward.id     = id_;
+        forward.routes = distance_;
+        publish (forward);
     }
 }
 
 
-
-void mote::recv (const confirm msg, const std::string event_name) {
-    if (msg.dest == id ())
-        std::cout
-            << "[mote[" << id_ << "]::recv(" << event_name << ")] "
-            << "recieved confirm: " << msg.source << "\n";
-}
+// template <class Protocol>
+// void mote<Protocol>::recv (const confirm msg, const std::string event_name) {
+//     if (msg.dest == id ())
+//         std::cout
+//             << "[mote[" << id_ << "]::recv(" << event_name << ")] "
+//             << "recieved confirm: " << msg.source << "\n";
+// }
 
 
 
@@ -302,13 +242,14 @@ void mote::recv (const confirm msg, const std::string event_name) {
 /**
  * Initialize routing table with neighbors
  */
-void mote::discover () {
+template <class Protocol>
+void mote<Protocol>::discover () {
     // clear any old table (or leftover memory)
     distance_.clear ();
     next_hop_.clear ();
 
     // find neighbors as listeners and add to table
-    for (listener<message>* l : this->event<message>::listeners ())
+    for (listener<routing>* l : this->event<routing>::listeners ())
     {
         mote* neighbor = static_cast <mote*> (l);
         
@@ -323,13 +264,23 @@ void mote::discover () {
 /**
  * Start network propigation of this motes routing table
  */
-void mote::invocate () const {
+template <class Protocol>
+void mote<Protocol>::invocate () const {
     // copy routing table
     routing update;
     update.id     = id_;
     update.routes = distance_;
 
     publish (update);
+}
+
+
+template <class Protocol>
+const int mote<Protocol>::next_hop (const int address) {
+    if (next_hop_.find (address) != next_hop_.end ()) 
+        return next_hop_[address];
+    else
+        return -1;
 }
 
 #endif
