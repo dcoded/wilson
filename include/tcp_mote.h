@@ -1,17 +1,34 @@
 #pragma once
+#include <future>
+#include <thread>
 #include <mote.h>
+
 
 struct message : public transmission {
     std::string data;
 };
 
 
-class tcp_mote : public mote <message> {
+class tcp_mote : public mote <message>, public std::thread {
 private:
 public:
+    std::atomic <int> bits_sent;
+    std::atomic <int> bits_recv;
+    
+    std::atomic <int> msgs_sent;
+    std::atomic <int> msgs_recv;
+
     using mote <message>::mote;
     // send/recv an application message to/from another mote in the network
     void send (message msg, const int destination);
+    std::future<void> test (message msg, const int destination) {
+        return std::async (std::launch::async, &tcp_mote::send, this, msg, destination);
+    }
+
+    std::future<void> init () {
+        // create routing tables
+        return std::async (std::launch::async, &tcp_mote::invocate, this);
+    }
 
 private:
     void recv (const message msg, const std::string event_name);
@@ -34,40 +51,50 @@ void tcp_mote::recv (message msg, const std::string event_name) {
     //     ack.prev   = id ();
     // }
 
-    if (msg.dest == id () || msg.next == id ()) {
-        std::cout
-            << "[mote[" << id () << "]::recv(" << event_name << ")] "
-            << "recieved data: " << msg.data << "\n";
+    if (msg.dest == uuid ()) {
+        // std::cout
+        //     << "[mote[" << id () << "]::recv(" << event_name << ")] "
+        //     << "recieved data: " << msg.data << "\n";
 
-        /* (sizeof (message) + msg.data.size ()) * 8 */
-        metric ("recv_bits")     += msg.data.size () * 8;
-        metric ("recv_messages") ++;
+        bits_recv += msg.data.size () * 8;
+        msgs_recv ++;
 
+        // send (ack, ack.dest);
+    }
+    else if (msg.next == uuid ()) {
+        // std::cout 
+        //     << "[mote[" << id () << "]::recv(" << event_name << ")] "
+        //     << "forwarding to dest " << msg.dest << "\n";
+
+        bits_recv += msg.data.size () * 8;
+        msgs_recv ++;
+
+        send (msg, msg.dest);
         // send (ack, ack.dest);
     }
 }
 
 void tcp_mote::send (message msg, const int destination) {
-    msg.source = id ();
+    msg.source = uuid ();
     msg.dest   = destination;
     msg.next   = next_hop (msg.dest);
-    msg.prev   = id ();
+    msg.prev   = uuid ();
 
     if (msg.next == -1) {
         // we cannot find a neighbor who knows of the destination
-        std::cout
-            << "[mote[" << id () << "]::send] "
-            << " cannot compute hop to destination " << msg.dest << "\n";
+        // std::cout
+        //     << "[mote[" << id () << "]::send] "
+        //     << " cannot compute hop to destination " << msg.dest << "\n";
     } else {
         // update the message to notify correct neighbor (next)
-        std::cout
-            << "[mote[" << id () << "]::send] "
-            << "(" << msg.source << "," << msg.next << "," << msg.dest << ")"
-            << "\n";
+        // std::cout
+        //     << "[mote[" << id () << "]::send] "
+        //     << "(" << msg.source << "," << msg.next << "," << msg.dest << ")"
+        //     << "\n";
 
         // pass it on
-        metric ("sent_bits")     += msg.data.size () * 8;
-        metric ("sent_messages") ++;
+        bits_sent += msg.data.size () * 8;
+        msgs_sent ++;
         publish (msg);
     }
 }

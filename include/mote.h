@@ -10,13 +10,11 @@
 #include <event.h>
 #include <point.h>
 #include <listener.h>
-#include <metrics.h>
 
-// Seed with a real random value, if available
-std::random_device rd;
-std::default_random_engine e1 (rd ());
 
-void add_noise (uint8_t* data, size_t len, double probability) {    
+void add_noise (uint8_t* data, size_t len, double probability) { 
+    std::random_device rd;
+    std::default_random_engine e1 (rd ());   
     std::uniform_int_distribution <int> dist (0, 0x7FFFFFFF);
 
     for (int i = 0; i < len; i++)
@@ -69,7 +67,7 @@ template <class Protocol>
 class mote : public listener <Protocol>, public event <Protocol>
            , public listener <routing> , public event <routing>
            //, public listener <confirm> , public event <confirm>
-           , public metric_source<int> {
+{
 
 private:
     point location_;
@@ -78,6 +76,8 @@ private:
     std::map <int, int>    next_hop_;
     std::map <int, double> distance_;
 public:
+    mote (mote const&) = delete;
+
     using event <Protocol>::subscribe;
     using event <routing>::subscribe;
     //using event <confirm>::subscribe;
@@ -85,15 +85,14 @@ public:
     using event <Protocol>::publish;
     using event <routing>::publish;
     //using event <confirm>::publish;
-
-    mote (int area_side_length); // creates a random location
-    mote (point location);
+    mote ();
 
     const point location () const;
+    void location (const point location);
 
     // get and set mote id (a.k.a address)
-    const int id () const;
-    void      id (const int id);
+    const int uuid () const;
+    void      uuid (const int id);
 
     // allows neighbors to "hear" radio broadcasts
     void subscribe (mote& neighbor);
@@ -123,33 +122,7 @@ private:
  * Constructors
  */
 template <class Protocol>
-mote<Protocol>::mote (int area_side_length) {
-    std::uniform_int_distribution <int> dist (0, area_side_length);
-    
-    int x = dist (e1);
-    int y = dist (e1);
-
-    location_ = point {x,y};   
-
-    define_metric ("sent_bits", 0);
-    define_metric ("recv_bits", 0);
-
-    define_metric ("sent_messages", 0);
-    define_metric ("recv_messages", 0);
-}
-
-template <class Protocol>
-mote<Protocol>::mote (point location) 
-: location_ (location) {
-    define_metric ("sent_bits", 0);
-    define_metric ("recv_bits", 0);
-
-    define_metric ("sent_messages", 0);
-    define_metric ("recv_messages", 0);
-}
-
-
-
+mote<Protocol>::mote () {}
 
 
 /**
@@ -159,14 +132,19 @@ template <class Protocol>
 const point mote<Protocol>::location () const { return location_; }
 
 template <class Protocol>
-const int   mote<Protocol>::id () const { return id_; }
+const int   mote<Protocol>::uuid () const { return id_; }
 
 template <class Protocol>
-void mote<Protocol>::id (const int id) {
+void mote<Protocol>::uuid (const int id) {
     id_ = id;
     this->event<Protocol>::name (std::string("Channel [message,") + std::to_string(id) + "]");
     this->event<routing>::name (std::string("Channel [routing,") + std::to_string(id) + "]");
     //this->event<confirm>::name (std::string("Channel [confirm,") + std::to_string(id) + "]");
+}
+
+template <class Protocol>
+void mote<Protocol>::location (const point location) {
+    location_ = location;
 }
 
 
@@ -253,8 +231,8 @@ void mote<Protocol>::discover () {
     {
         mote* neighbor = static_cast <mote*> (l);
         
-        distance_[neighbor->id ()] = location ().distance (neighbor->location ());
-        next_hop_[neighbor->id ()] = neighbor->id ();
+        distance_[neighbor->uuid ()] = location ().distance (neighbor->location ());
+        next_hop_[neighbor->uuid ()] = neighbor->uuid ();
     }
 
     distance_[id_] = 0;   // route to self has no distance
