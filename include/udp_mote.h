@@ -13,19 +13,19 @@ struct transmission {
     int prev;
 };
 
-struct tcp_lite_header : public transmission {
+struct udp_lite_header : public transmission {
     uint16_t source;
     uint16_t dest;
     uint16_t size;
     uint16_t checksum;
 };
 
-struct message : public tcp_lite_header {
+struct message : public udp_lite_header {
     std::string data;
 };
 
 
-class tcp_mote : public mote <message>, public std::thread {
+class udp_mote : public mote <message>, public std::thread {
 private:
 public:
     std::atomic <int> bytes_sent;
@@ -38,7 +38,7 @@ public:
     virtual void send (message msg, const int destination);
     
     std::future<void> test (message msg, const int destination) {
-        return std::async (std::launch::async, &tcp_mote::send, this, msg, destination);
+        return std::async (std::launch::async, &udp_mote::send, this, msg, destination);
     }
 
 private:
@@ -49,12 +49,12 @@ private:
 /**
  * Application Message Handlers
  */
-void tcp_mote::recv (message msg, const std::string event_name) {
+void udp_mote::recv (message msg, const std::string event_name) {
     // last arg is a percentage from 0.0 to 1.0
     add_noise (reinterpret_cast <uint8_t*> (&msg), sizeof (transmission), 0.0);
 
     if (msg.dest == uuid () || msg.next == uuid ()) {
-        bytes_recv += sizeof (tcp_lite_header) - sizeof (transmission);
+        bytes_recv += sizeof (udp_lite_header) - sizeof (transmission);
         msgs_recv ++;
     }
 
@@ -67,7 +67,7 @@ void tcp_mote::recv (message msg, const std::string event_name) {
     }
 }
 
-void tcp_mote::send (message msg, const int destination) {
+void udp_mote::send (message msg, const int destination) {
     msg.source = uuid ();
     msg.dest   = destination;
     msg.next   = next_hop (msg.dest);
@@ -76,7 +76,7 @@ void tcp_mote::send (message msg, const int destination) {
     if (msg.next == -1) { // cant calculate path
 
     } else {
-        bytes_sent += sizeof (tcp_lite_header) - sizeof (transmission);
+        bytes_sent += sizeof (udp_lite_header) - sizeof (transmission);
         msgs_sent ++;
         publish (msg);
     }

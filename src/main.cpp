@@ -5,7 +5,14 @@
 
 // Seed with a real random value, if available
 
-const point random_location (int max);
+template <typename Iter>
+void init_network (const Iter& begin, const Iter& end, const int size);
+
+template <typename T>
+void setup_pubsub (std::vector <T>& motes, const int RADIO_STRENGTH);
+
+template <typename T>
+void setup_routes (std::vector <T>& motes);
 
 template <class Iter, class Job>
 void parallel_job (const Iter& begin, const Iter& end, Job fn);
@@ -28,12 +35,104 @@ int main(int argc, char** argv)
 
     std::vector <mote_type> motes (COUNT_MOTES);
 
-    // assign IDs/addresses & locations
-    for (int i = 0; i < motes.size (); i++) {
-        motes[i].uuid (i);
-        motes[i].location (random_location (SPACE_SIZE));
+
+    // assign IDs/addresses & spatial locations
+    init_network (motes.begin (), motes.end (), SPACE_SIZE);
+
+    /* create pub/sub channel between two motes if they have a
+       Euclidian distance < RADIO_STRENGTH.
+    */
+    setup_pubsub (motes, RADIO_STRENGTH);
+
+    /* Perform distributed distance vector routing to create
+       routing tables for each mote.
+    */
+    setup_routes (motes);
+
+    // parallel_job (motes.begin (), motes.end (),
+    //     std::bind (&mote_type::init, std::placeholders::_1));
+
+
+
+    std::vector <std::future<void>> jobs;
+    // send messages 
+    for (mote_type& a : motes)
+    for (mote_type& b : motes)
+    {
+        if (a.uuid () != b.uuid ())
+        {
+            message test;
+
+            std::stringstream ss;
+            ss << "Hi " << b.uuid () << " I'm  " << a.uuid ();
+
+            test.data = ss.str ();
+
+            jobs.push_back (a.test(test, b.uuid ()));
+        }
     }
 
+    for (auto& job : jobs) job.get ();
+
+
+
+
+    // /*
+    //     Below are some basic metrics to identify transmission performance
+    // */
+    int bytes_sent = 0;
+    int bytes_recv = 0;
+    int msgs_sent = 0;
+    int msgs_recv = 0;
+
+    for (mote_type& m : motes) {
+        bytes_sent += m.bytes_sent;
+        bytes_recv += m.bytes_recv;
+        msgs_sent += m.msgs_sent;
+        msgs_recv += m.msgs_recv;
+    }
+
+    std::cout << "Bytes Sent: " << bytes_sent << "\n";
+    std::cout << "Bytes Recv: " << bytes_recv << "\n";
+
+    std::cout << "Messages Sent: " << msgs_sent << "\n";
+    std::cout << "Messages Recv: " << msgs_recv << "\n";
+
+    std::cout << std::endl;
+}
+
+
+
+
+
+
+
+template <typename Iter>
+void init_network (const Iter& begin, const Iter& end, const int size) {
+    std::random_device rd;
+    std::default_random_engine e1 (rd ());
+    std::uniform_int_distribution <int> dist (0, size);
+
+    int id = 0;
+    for (Iter it = begin; it != end; it++) {
+        int x = dist (e1);
+        int y = dist (e1);
+
+        point location {x,y};
+
+        it->uuid (id);
+        it->location (location);
+
+
+        std::cout << "[init] " << id << " @ " << location << "\n";
+        id++;
+    }
+}
+
+
+
+template <typename T>
+void setup_pubsub (std::vector <T>& motes, const int RADIO_STRENGTH) {
     // initialize pub/sub for two motes if Euclidian distance < RADIO_STRENGTH
     for (int i = 0; i < motes.size (); i++)
     for (int j = 0; j < motes.size (); j++)
@@ -51,72 +150,14 @@ int main(int argc, char** argv)
             motes[i].subscribe (motes[j]);
         }
     }
+}
 
+template <typename T>
+void setup_routes (std::vector <T>& motes) {
     for (auto& mote : motes) mote.discover ();
     for (auto& mote : motes) mote.invocate ();
-
-    // parallel_job (motes.begin (), motes.end (),
-    //     std::bind (&mote_type::init, std::placeholders::_1));
-
-
-
-    std::vector <std::future<void>> jobs;
-    // send messages 
-    for (int i = 0; i < motes.size (); i++)
-    for (int j = 0; j < motes.size (); j++) {
-        if (i == j) continue;
-
-        std::stringstream ss;
-        ss << "Hi " << j << " I'm  " << i;
-
-        message test;
-        test.data = ss.str ();
-
-        jobs.push_back (motes[i].test(test, motes[j].uuid ()));
-    }
-
-    for (auto& job : jobs) job.get ();
-
-
-
-
-    // /*
-    //     Below are some basic metrics to identify transmission performance
-    // */
-    int sent_bits = 0;
-    int recv_bits = 0;
-    int sent_msgs = 0;
-    int recv_msgs = 0;
-
-    for (mote_type& m : motes) {
-        sent_bits += m.bits_sent;
-        recv_bits += m.bits_recv;
-        sent_msgs += m.msgs_sent;
-        recv_msgs += m.msgs_recv;
-    }
-
-    std::cout << "Bits Sent: " << sent_bits << "\n";
-    std::cout << "Bits Recv: " << recv_bits << "\n";
-
-    std::cout << "Msgs Sent: " << sent_msgs << "\n";
-    std::cout << "Msgs Recv: " << recv_msgs << "\n";
-
-    std::cout << std::endl;
 }
 
-
-
-
-const point random_location (int max) {
-    std::random_device rd;
-    std::default_random_engine e1 (rd ());
-    std::uniform_int_distribution <int> dist (0, max);
-    
-    int x = dist (e1);
-    int y = dist (e1);
-
-    return point {x,y};   
-}
 
 template <class Iter, class Job>
 void parallel_job (const Iter& begin, const Iter& end, Job fn) {

@@ -11,42 +11,11 @@
 #include <point.h>
 #include <listener.h>
 
-//using message = std::string;
-struct transmission {
-    int source;
-    int dest;
 
-    int next;
-    int prev;
-};
-
-// r update = routing update
 struct routing {
     int id;
     std::map <int, double> routes;
 };
-
-// struct message : public transmission {
-//     std::string data;
-// };
-
-// struct tcplite {
-//     uint16_t source;
-//     uint16_t dest;
-//     uint16_t length;
-//     uint16_t checksum;
-
-//     std::string data;
-// };
-
-// struct tcp {
-//     uint32_t source;
-//     uint32_t dest;
-//     uint32_t length;
-//     uint32_t checksum;
-
-//     std::string data;
-// };
 
 template <class Protocol>
 class mote : public listener <Protocol>, public event <Protocol>
@@ -61,15 +30,15 @@ private:
     std::map <int, std::atomic<int> >    next_hop_;
     std::map <int, std::atomic<double> > distance_;
 public:
-    mote (mote const&) = delete;
-
     using event <Protocol>::subscribe;
     using event <routing>::subscribe;
-    //using event <confirm>::subscribe;
 
     using event <Protocol>::publish;
     using event <routing>::publish;
-    //using event <confirm>::publish;
+
+    virtual void recv (const Protocol msg, const std::string event_name) = 0;
+    virtual void send (Protocol msg, const int destination) = 0;
+
     mote ();
 
     const point location () const;
@@ -88,14 +57,11 @@ public:
     // broadcast routing table to network
     void invocate () const;
 
+protected:
     const int next_hop (const int address);
 
-private:
     // listen for routing table updates
-    virtual void recv (const routing msg, const std::string event_name);
-
-    // listen for transmission acknowledgements
-    // virtual void recv (const confirm msg, const std::string event_name);
+    virtual void recv (const routing msg, const std::string event_name) final;
 };
 
 
@@ -117,19 +83,20 @@ template <class Protocol>
 const point mote<Protocol>::location () const { return location_; }
 
 template <class Protocol>
-const int   mote<Protocol>::uuid () const { return id_; }
+void mote<Protocol>::location (const point location) {
+    location_ = location;
+}
+
+
+template <class Protocol>
+const int mote<Protocol>::uuid () const { return id_; }
 
 template <class Protocol>
 void mote<Protocol>::uuid (const int id) {
     id_ = id;
-    this->event<Protocol>::name (std::string("Channel [message,") + std::to_string(id) + "]");
+    this->event<Protocol>::name (std::string("Channel [protocol,") + std::to_string(id) + "]");
     this->event<routing>::name (std::string("Channel [routing,") + std::to_string(id) + "]");
     //this->event<confirm>::name (std::string("Channel [confirm,") + std::to_string(id) + "]");
-}
-
-template <class Protocol>
-void mote<Protocol>::location (const point location) {
-    location_ = location;
 }
 
 
@@ -217,7 +184,7 @@ void mote<Protocol>::discover () {
     // find neighbors as listeners and add to table
     for (listener<routing>* l : this->event<routing>::listeners ())
     {
-        mote* neighbor = static_cast <mote*> (l);
+        mote* neighbor = dynamic_cast <mote*> (l);
         
         distance_[neighbor->uuid ()] = location ().distance (neighbor->location ());
         next_hop_[neighbor->uuid ()] = neighbor->uuid ();
