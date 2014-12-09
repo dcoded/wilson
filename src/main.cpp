@@ -53,9 +53,10 @@ int main(int argc, char** argv)
     }
 
     for (auto& mote : motes) mote.discover ();
+    for (auto& mote : motes) mote.invocate ();
 
-    parallel_job (motes.begin (), motes.end (),
-        std::bind (&mote_type::init, std::placeholders::_1));
+    // parallel_job (motes.begin (), motes.end (),
+    //     std::bind (&mote_type::init, std::placeholders::_1));
 
 
 

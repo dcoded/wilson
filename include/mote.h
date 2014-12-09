@@ -4,27 +4,12 @@
 
 #include <iostream>
 #include <functional>
-#include <random>
 #include <map>
+#include <atomic>
 
 #include <event.h>
 #include <point.h>
 #include <listener.h>
-
-
-void add_noise (uint8_t* data, size_t len, double probability) { 
-    std::random_device rd;
-    std::default_random_engine e1 (rd ());   
-    std::uniform_int_distribution <int> dist (0, 0x7FFFFFFF);
-
-    for (int i = 0; i < len; i++)
-    for (int j = 0; j < 8; j++)
-    {
-        int random_number = dist (e1);
-        if (random_number < probability * 0xFFFFFFFF)
-            data[i] ^= (1 << j);
-    }
-}
 
 //using message = std::string;
 struct transmission {
@@ -73,8 +58,8 @@ private:
     point location_;
     int   id_;
 
-    std::map <int, int>    next_hop_;
-    std::map <int, double> distance_;
+    std::map <int, std::atomic<int> >    next_hop_;
+    std::map <int, std::atomic<double> > distance_;
 public:
     mote (mote const&) = delete;
 
@@ -199,7 +184,10 @@ void mote<Protocol>::recv (const routing update, const std::string event_name) {
     if (updated) {
         routing forward;
         forward.id     = id_;
-        forward.routes = distance_;
+
+        for (auto& d : distance_)
+            forward.routes[d.first] = d.second;
+        
         publish (forward);
     }
 }
@@ -247,7 +235,9 @@ void mote<Protocol>::invocate () const {
     // copy routing table
     routing update;
     update.id     = id_;
-    update.routes = distance_;
+    
+    for (auto& d : distance_)
+        update.routes[d.first] = d.second;
 
     publish (update);
 }

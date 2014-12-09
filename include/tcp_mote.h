@@ -1,8 +1,12 @@
 #pragma once
 #include <future>
 #include <thread>
+#include <random>
+
 #include <mote.h>
 
+
+void add_noise (uint8_t* data, size_t len, double probability);
 
 struct message : public transmission {
     std::string data;
@@ -99,3 +103,18 @@ void tcp_mote::send (message msg, const int destination) {
     }
 }
 
+
+
+void add_noise (uint8_t* data, size_t len, double probability) { 
+    std::random_device rd;
+    std::default_random_engine e1 (rd ());   
+    std::uniform_int_distribution <int> dist (0, 0x7FFFFFFF);
+
+    for (int i = 0; i < len; i++)
+    for (int j = 0; j < 8; j++)
+    {
+        int random_number = dist (e1);
+        if (random_number < probability * 0xFFFFFFFF)
+            data[i] ^= (1 << j);
+    }
+}
