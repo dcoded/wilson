@@ -19,9 +19,7 @@ struct routing {
 
 template <class Protocol>
 class mote : public listener <Protocol>, public event <Protocol>
-           , public listener <routing> , public event <routing>
-           //, public listener <confirm> , public event <confirm>
-{
+           , public listener <routing> , public event <routing> {
 
 private:
     point location_;
@@ -29,12 +27,15 @@ private:
 
     std::map <int, std::atomic<int> >    next_hop_;
     std::map <int, std::atomic<double> > distance_;
+
 public:
+    /* Prevent ambiguity due to multiple inheritance */
+    using event <Protocol>::publish;
     using event <Protocol>::subscribe;
+
+    using event <routing>::publish;
     using event <routing>::subscribe;
 
-    using event <Protocol>::publish;
-    using event <routing>::publish;
 
     virtual void recv (const Protocol msg, const std::string event_name) = 0;
     virtual void send (Protocol msg, const int destination) = 0;
@@ -60,12 +61,10 @@ public:
 protected:
     const int next_hop (const int address);
 
+private:
     // listen for routing table updates
-    virtual void recv (const routing msg, const std::string event_name) final;
+    void recv (const routing msg, const std::string event_name);
 };
-
-
-
 
 
 
@@ -76,8 +75,10 @@ template <class Protocol>
 mote<Protocol>::mote () {}
 
 
+
+
 /**
- * Field Access
+ * Location getter/setter
  */
 template <class Protocol>
 const point mote<Protocol>::location () const { return location_; }
@@ -88,6 +89,11 @@ void mote<Protocol>::location (const point location) {
 }
 
 
+
+
+/**
+ * UUID getter/setter
+ */
 template <class Protocol>
 const int mote<Protocol>::uuid () const { return id_; }
 
@@ -112,10 +118,6 @@ void mote<Protocol>::subscribe (mote& neighbor) {
     subscribe (static_cast<listener<routing>*>(&neighbor));
     //subscribe (static_cast<listener<confirm>*>(&neighbor));
 }
-
-
-
-
 
 
 
@@ -160,16 +162,6 @@ void mote<Protocol>::recv (const routing update, const std::string event_name) {
 }
 
 
-// template <class Protocol>
-// void mote<Protocol>::recv (const confirm msg, const std::string event_name) {
-//     if (msg.dest == id ())
-//         std::cout
-//             << "[mote[" << id_ << "]::recv(" << event_name << ")] "
-//             << "recieved confirm: " << msg.source << "\n";
-// }
-
-
-
 
 
 /**
@@ -194,6 +186,9 @@ void mote<Protocol>::discover () {
     next_hop_[id_] = id_; // route to self via self...duh
 }
 
+
+
+
 /**
  * Start network propigation of this motes routing table
  */
@@ -210,6 +205,10 @@ void mote<Protocol>::invocate () const {
 }
 
 
+
+/**
+ * Helper class for child implementation to retrieve next hop
+ */
 template <class Protocol>
 const int mote<Protocol>::next_hop (const int address) {
     if (next_hop_.find (address) != next_hop_.end ()) 
