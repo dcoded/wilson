@@ -2,8 +2,8 @@ PROJECT_NAME = $(shell basename $(CURDIR))
 
 CC_BUILD = g++
 SRC_EXTN = cpp
-CC_FLAGS = -c -Wall -std=c++11 -Wno-char-subscripts -Iinclude -I/usr/local/include -O3
-LD_FLAGS = -L/usr/local/lib 
+CC_FLAGS = -c -pthread -Wall -std=c++11 -Wno-char-subscripts -Iinclude -I/usr/local/include -O3
+LD_FLAGS = -pthread -L/usr/local/lib 
 
 
 
