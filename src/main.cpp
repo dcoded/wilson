@@ -54,6 +54,7 @@ int main(int argc, char** argv)
     // parallel_job (motes.begin (), motes.end (),
     //     std::bind (&mote_type::init, std::placeholders::_1));
 
+    int connections = 0;
 
     for (size_t i = 0; i < motes.size (); i++)
     for (size_t j = 0; j < motes.size (); j++)
@@ -63,6 +64,7 @@ int main(int argc, char** argv)
         motes[i].connect (motes[j].uuid ());
         
         if (motes[i].connected (motes[j].uuid ())) {
+            connections++;
             motes[i].send (msg, motes[j].uuid ());
             motes[i].close (motes[j].uuid ());
         }
@@ -116,6 +118,7 @@ int main(int argc, char** argv)
 
     std::cout << "Messages Sent: " << msgs_sent << "\n";
     std::cout << "Messages Recv: " << msgs_recv << "\n";
+    std::cout << "Connections  : " << connections << "\n";
 
     std::cout << std::endl;
 }
