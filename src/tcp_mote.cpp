@@ -72,8 +72,7 @@ void tcp_mote::recv (tcp_message msg, const std::string event_name) {
 
 void tcp_mote::respond (tcp_message& msg) {
 
-    bool reset    = false;
-    bool response = false;
+    bool reset = false;
 
     if (state_.find (msg.source) == state_.end ()) {
         state_[msg.source] = TCP_STATE_CLOSED;
@@ -117,14 +116,14 @@ void tcp_mote::respond (tcp_message& msg) {
                 msg.ack  = rand ();
                 msg.size = 0;
                 send (msg, msg.dest);
-            }
+            } else reset = true;
         break;
 
         case TCP_STATE_SYN_RECV: // RECEIVER MOTE
             if (msg.flags & TCP_ACK) {
                 std::cout << "[" << msg.source << ":" << uuid () << "] RECEIVER ESTABLISHED\n";
                 state_[msg.source] = TCP_STATE_SERVER_ESTABLISHED;
-            }
+            } else reset = true;
         break;
 
         case TCP_STATE_SERVER_ESTABLISHED:
@@ -143,7 +142,7 @@ void tcp_mote::respond (tcp_message& msg) {
                 msg.flags |= TCP_FIN;
 
                 send (msg, msg.dest);
-            }
+            } else reset = true;
         break;
 
         case TCP_STATE_CLIENT_ESTABLISHED:
@@ -153,13 +152,13 @@ void tcp_mote::respond (tcp_message& msg) {
             if (msg.flags & TCP_ACK) {
                 std::cout << "[" << msg.source << ":" << uuid () << "] RECEIVER CLOSED\n";
                 state_[msg.source] = TCP_STATE_CLOSED;
-            }
+            } else reset = true;
         break;
 
         case TCP_STATE_FIN_WAIT_1:
             if (msg.flags & TCP_ACK) {
                 state_[msg.source] = TCP_STATE_FIN_WAIT_2;
-            }
+            } else reset = true;
         break;
 
         case TCP_STATE_FIN_WAIT_2:
@@ -173,13 +172,12 @@ void tcp_mote::respond (tcp_message& msg) {
                 msg.flags |= TCP_ACK;
 
                 send (msg, msg.dest);
-            }
+            } else reset = true;
         break;
     }
 
     if (reset)
     {
-        response = true;
         msg = rst;
         state_[rst.dest] = TCP_STATE_CLOSED;
         std::cout << "[" << msg.source << ":" << uuid () << "] RESET / CLOSED\n";
