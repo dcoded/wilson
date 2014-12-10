@@ -27,9 +27,9 @@ int main(int argc, char** argv)
               likelyhood of an isolated node.
     */
     /** 10,5,4 showed that sent==recv */
-    const int SPACE_SIZE     = 100; // size of area sensors can be placed (NxN)
-    const int COUNT_MOTES    = 32; // # of sensors around
-    const int RADIO_STRENGTH = 15; // how far a sensor can communicate
+    const int SPACE_SIZE     = 150; // size of area sensors can be placed (NxN)
+    const int COUNT_MOTES    = 16; // # of sensors around
+    const int RADIO_STRENGTH = 50; // how far a sensor can communicate
 
     using mote_type = tcp_mote;
 
@@ -53,6 +53,15 @@ int main(int argc, char** argv)
     //     std::bind (&mote_type::init, std::placeholders::_1));
 
 
+    for (int i = 0; i < motes.size (); i++)
+    for (int j = 0; j < motes.size (); j++)
+    {
+        motes[i].connect (motes[j].uuid ());
+        motes[i].close (motes[j].uuid ());
+    }
+    
+
+ 
 
     std::vector <std::future<void>> jobs;
     // send messages 
@@ -68,11 +77,13 @@ int main(int argc, char** argv)
 
             test.data = ss.str ();
 
-            jobs.push_back (a.test(test, b.uuid ()));
+            a.connect (b.uuid ());
+            a.close (b.uuid ());
+           // jobs.push_back (a.connect(b.uuid ()));
         }
     }
 
-    for (auto& job : jobs) job.get ();
+    // for (auto& job : jobs) job.get ();
 
 
 

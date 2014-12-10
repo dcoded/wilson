@@ -5,25 +5,53 @@
 
 #include <mote.h>
 
+enum tcp_flag {
+    TCP_FIN = 0x01,
+    TCP_SYN = 0x02,
+    TCP_RST = 0x04,
+    TCP_ACK = 0x10,
+    TCP_NOFLAGS = 0xFE00
+};
+
+enum tcp_state {
+    TCP_STATE_CLOSED,
+    TCP_STATE_SYN_SENT,
+    TCP_STATE_SYN_RECV,
+    TCP_STATE_SERVER_ESTABLISHED,
+    TCP_STATE_CLIENT_ESTABLISHED,
+    TCP_STATE_FIN_WAIT_1,
+    TCP_STATE_FIN_WAIT_2,
+    TCP_STATE_LAST_ACK
+
+};
+
 struct transmission {
     int next;
     int prev;
 };
 
-struct tcp_lite_header : public transmission {
+struct tcp_header : public transmission {
     uint16_t source;
     uint16_t dest;
+
+    uint32_t seq;
+    uint32_t ack;
+
+    uint16_t flags;
     uint16_t size;
+
     uint16_t checksum;
+    uint16_t urgent;
 };
 
-struct message : public tcp_lite_header {
+struct message : public tcp_header {
     std::string data;
 };
 
 
 class tcp_mote : public mote <message>, public std::thread {
 private:
+    std::map <int, tcp_state> state_;
 public:
     std::atomic <int> bytes_sent;
     std::atomic <int> bytes_recv;
@@ -37,8 +65,11 @@ public:
     static void create_interference (message& msg, double probability);
     static bool not_interfered (message& msg, double probability);
 
-    std::future<void> test (message msg, const int destination);
+    std::future <void> connect (const int destination);
+    std::future <void> close (const int destination);
 
 private:
     virtual void recv (const message msg, const std::string event_name);
+
+    void respond (message& msg);
 };
