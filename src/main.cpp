@@ -55,8 +55,8 @@ int main(int argc, char** argv)
     //     std::bind (&mote_type::init, std::placeholders::_1));
 
 
-    for (int i = 0; i < motes.size (); i++)
-    for (int j = 0; j < motes.size (); j++)
+    for (size_t i = 0; i < motes.size (); i++)
+    for (size_t j = 0; j < motes.size (); j++)
     {
         pckt_type msg;
         msg.data = "foo";
@@ -153,8 +153,8 @@ void init_network (const Iter& begin, const Iter& end, const int size) {
 template <typename T>
 void setup_pubsub (std::vector <T>& motes, const int RADIO_STRENGTH) {
     // initialize pub/sub for two motes if Euclidian distance < RADIO_STRENGTH
-    for (int i = 0; i < motes.size (); i++)
-    for (int j = 0; j < motes.size (); j++)
+    for (size_t i = 0; i < motes.size (); i++)
+    for (size_t j = 0; j < motes.size (); j++)
     {
         if (i == j) continue;
 
