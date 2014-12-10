@@ -94,6 +94,28 @@ void simulate (const int COUNT_MOTES, const int SPACE_SIZE, const int RADIO_STRE
         }
     }
 
+        // std::vector <std::future<void>> jobs;
+    // // send messages 
+    // for (mote_type& a : motes)
+    // for (mote_type& b : motes)
+    // {
+    //     if (a.uuid () != b.uuid ())
+    //     {
+    //         pckt_type test;
+
+    //         std::stringstream ss;
+    //         ss << "Hi " << b.uuid () << " I'm  " << a.uuid ();
+
+    //         test.data = ss.str ();
+
+    //         a.connect (b.uuid ());
+    //         a.close (b.uuid ());
+    //        // jobs.push_back (a.connect(b.uuid ()));
+    //     }
+    // }
+
+    // for (auto& job : jobs) job.get ();
+
 
     // /*
     //     Below are some basic metrics to identify transmission performance
@@ -110,6 +132,9 @@ void simulate (const int COUNT_MOTES, const int SPACE_SIZE, const int RADIO_STRE
         msgs_recv += m.msgs_recv;
     }
 
+    std::cout << "-----------------------------------\n";
+    std::cout << "     Network Traffic Statistics    \n";
+    std::cout << "\n";
     std::cout << "Bytes Sent   : " << bytes_sent << "\n";
     std::cout << "Bytes Recv   : " << bytes_recv << "\n";
     std::cout << "\n";
@@ -119,7 +144,7 @@ void simulate (const int COUNT_MOTES, const int SPACE_SIZE, const int RADIO_STRE
     std::cout << "Transfers    : " << connections << "\n";
     std::cout << "\n";
     std::cout << "Bytes / Xfer : " << int (bytes_sent / connections) << "\n";
-    std::cout << "Transmissions: " << int (msgs_sent / connections)  << "\n";
+    std::cout << "Hops  / Xfer : " << int (msgs_sent / connections)  << "\n";
 
     std::cout << std::endl;
 }
