@@ -1,8 +1,8 @@
 #include <tcp_mote.h>
 
 
-std::future<void> tcp_mote::connect (const int destination) {
-    std::future <void> future;
+std::future<bool> tcp_mote::connect (const int destination) {
+    std::future <bool> future;
 
     if (state_.find (destination) == state_.end ())
         state_[destination] = TCP_STATE_CLOSED;
@@ -20,7 +20,7 @@ std::future<void> tcp_mote::connect (const int destination) {
 
         future = std::async (std::launch::async, &tcp_mote::send, this, msg, destination);
     } else {
-        future = std::future <void> ();
+        future = std::async ([]() -> bool { return false; });
         std::cout << "connect(): error, dest is already open\n";
     }
 
@@ -28,7 +28,8 @@ std::future<void> tcp_mote::connect (const int destination) {
     // while != DATA?
 }
 
-std::future <void> tcp_mote::close (const int destination) {
+std::future <bool> tcp_mote::close (const int destination) {
+
     if (state_.find (destination) == state_.end ())
         state_[destination] = TCP_STATE_CLOSED;
 
@@ -45,7 +46,7 @@ std::future <void> tcp_mote::close (const int destination) {
 
         return std::async (std::launch::async, &tcp_mote::send, this, msg, destination);
     }    
-    return std::future <void> ();
+    return std::async ([]() -> bool { return false; });
 }
 
 
@@ -187,7 +188,7 @@ void tcp_mote::respond (tcp_message& msg) {
 
 
 
-void tcp_mote::send (tcp_message msg, const int destination) {
+bool tcp_mote::send (tcp_message msg, const int destination) {
     msg.next   = next_hop (destination);
     msg.prev   = uuid ();
     msg.dest   = destination;
@@ -201,6 +202,8 @@ void tcp_mote::send (tcp_message msg, const int destination) {
         msgs_sent ++;
         publish (msg);
     }
+
+    return (msg.next != -1);
 }
 
 

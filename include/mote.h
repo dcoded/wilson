@@ -38,7 +38,7 @@ public:
 
 
     virtual void recv (const Protocol msg, const std::string event_name) = 0;
-    virtual void send (Protocol msg, const int destination) = 0;
+    virtual bool send (Protocol msg, const int destination) = 0;
 
     mote ();
 

@@ -29,7 +29,7 @@ void udp_mote::recv (udp_message msg, const std::string event_name) {
 
 
 
-void udp_mote::send (udp_message msg, const int destination) {
+bool udp_mote::send (udp_message msg, const int destination) {
     msg.source = uuid ();
     msg.dest   = destination;
     msg.next   = next_hop (msg.dest);
@@ -42,6 +42,8 @@ void udp_mote::send (udp_message msg, const int destination) {
         msgs_sent ++;
         publish (msg);
     }
+
+    return (msg.next != -1);
 }
 
 
@@ -77,17 +79,17 @@ bool udp_mote::not_interfered (udp_message& msg, double probability) {
 }
 
 
-std::future<void> udp_mote::test (udp_message msg, const int destination) {
-    return std::async (std::launch::async, &udp_mote::send, this, msg, destination);
+// std::future<bool> udp_mote::test (udp_message msg, const int destination) {
+//     return std::async (std::launch::async, &udp_mote::send, this, msg, destination);
+// }
+
+
+std::future <bool> udp_mote::connect (int destination) {
+    return std::async ([]() -> bool { return true; });
 }
 
-
-std::future <void> udp_mote::connect (int destination) {
-    return std::future <void> ();
-}
-
-std::future <void> udp_mote::close (int destination) {
-    return std::future <void> ();
+std::future <bool> udp_mote::close (int destination) {
+    return std::async ([]() -> bool { return true; });
 }
 
 bool udp_mote::connected (const int destination) {

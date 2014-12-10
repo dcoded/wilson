@@ -64,8 +64,9 @@ int main(int argc, char** argv)
         motes[i].connect (motes[j].uuid ());
         
         if (motes[i].connected (motes[j].uuid ())) {
-            connections++;
-            motes[i].send (msg, motes[j].uuid ());
+            if (motes[i].send (msg, motes[j].uuid ())) {
+                connections++;
+            }
             motes[i].close (motes[j].uuid ());
         }
     }

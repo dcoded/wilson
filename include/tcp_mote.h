@@ -45,13 +45,13 @@ public:
     std::atomic <int> msgs_recv;
 
     // send/recv an application message to/from another mote in the network
-    virtual void send (message msg, const int destination);
+    virtual bool send (message msg, const int destination);
 
     static void create_interference (message& msg, double probability);
     static bool not_interfered (message& msg, double probability);
 
-    std::future <void> connect (const int destination);
-    std::future <void> close (const int destination);
+    std::future <bool> connect (const int destination);
+    std::future <bool> close (const int destination);
 
     bool connected (const int destination);
 
