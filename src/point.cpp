@@ -18,7 +18,7 @@ size_t point::size () const {
 
 const double point::distance (const point& other) const {
     int sum = 0;
-    for (int i = 0; i < size (); i++)
+    for (size_t i = 0; i < size (); i++)
         sum += pow (coordinates_[i] - other[i], 2);
     
     return sqrt(sum);
@@ -41,7 +41,7 @@ bool point::operator< (const point& rhs) const {
 
     assert (size () == rhs.size ());
 
-    for (int i = 0; i < size (); i++) {
+    for (size_t i = 0; i < size (); i++) {
         if (coordinates_[i] < rhs[i]) return true;
         if (coordinates_[i] > rhs[i]) return false;
     }

@@ -214,8 +214,8 @@ void tcp_mote::create_interference (tcp_message& msg, double probability) {
     std::default_random_engine e1 (rd ());   
     std::uniform_int_distribution <uint32_t> dist (0, 0xFFFFFFFF);
 
-    for (int i = 0; i < len; i++)
-    for (int j = 0; j < 8; j++)
+    for (size_t i = 0; i < len; i++)
+    for (size_t j = 0; j < 8; j++)
     {
         uint32_t random_number = dist (e1);
         if (random_number < probability * 0xFFFFFFFF)
@@ -228,7 +228,7 @@ bool tcp_mote::not_interfered (tcp_message& msg, double probability) {
     std::default_random_engine e1 (rd ());   
     std::uniform_int_distribution <uint32_t> dist (0, 0xFFFFFFFF);
 
-    for (int i = 0; i < sizeof (msg) * 8; i++)
+    for (size_t i = 0; i < sizeof (msg) * 8; i++)
     {
         uint32_t random_number = dist (e1);
         if (random_number < probability * 0xFFFFFFFF)
