@@ -80,6 +80,8 @@ void simulate (const int COUNT_MOTES, const int SPACE_SIZE, const int RADIO_STRE
     for (size_t i = 0; i < motes.size (); i++)
     for (size_t j = 0; j < motes.size (); j++)
     {
+        if (i == j) continue;
+
         pckt_type msg;
         msg.data = "foo";
         motes[i].connect (motes[j].uuid ());
@@ -113,10 +115,11 @@ void simulate (const int COUNT_MOTES, const int SPACE_SIZE, const int RADIO_STRE
     std::cout << "\n";
     std::cout << "Messages Sent: " << msgs_sent << "\n";
     std::cout << "Messages Recv: " << msgs_recv << "\n";
-    std::cout << "Connections  : " << connections << "\n";
     std::cout << "\n";
-    std::cout << "Bytes / Conn : " << int (bytes_sent / connections) << " bytes per connection\n";
-    std::cout << "Avg. Distance: " << int (msgs_sent / connections)  << " hops per connection\n";
+    std::cout << "Transfers    : " << connections << "\n";
+    std::cout << "\n";
+    std::cout << "Bytes / Xfer : " << int (bytes_sent / connections) << "\n";
+    std::cout << "Transmissions: " << int (msgs_sent / connections)  << "\n";
 
     std::cout << std::endl;
 }

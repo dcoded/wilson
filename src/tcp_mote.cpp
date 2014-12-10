@@ -75,7 +75,7 @@ void tcp_mote::respond (tcp_message& msg) {
 
     bool reset = false;
 
-    if (state_.find (msg.source) == state_.end ()) {
+    if (state_.find (msg.source) == state_.end () || msg.flags & TCP_RST) {
         state_[msg.source] = TCP_STATE_CLOSED;
     }
 
