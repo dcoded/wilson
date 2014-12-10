@@ -30,11 +30,8 @@ struct tcp_message : public tcp_header {
     std::string data;
 };
 
-namespace {
-    using message = tcp_message;
-}
 
-class tcp_mote : public mote <message>, public std::thread {
+class tcp_mote : public mote <tcp_message>, public std::thread {
 private:
     std::map <int, tcp_state> state_;
 public:
@@ -45,10 +42,10 @@ public:
     std::atomic <int> msgs_recv;
 
     // send/recv an application message to/from another mote in the network
-    virtual bool send (message msg, const int destination);
+    virtual bool send (tcp_message msg, const int destination);
 
-    static void create_interference (message& msg, double probability);
-    static bool not_interfered (message& msg, double probability);
+    static void create_interference (tcp_message& msg, double probability);
+    static bool not_interfered (tcp_message& msg, double probability);
 
     std::future <bool> connect (const int destination);
     std::future <bool> close (const int destination);
@@ -57,7 +54,7 @@ public:
 
 
 private:
-    virtual void recv (const message msg, const std::string event_name);
+    virtual void recv (const tcp_message msg, const std::string event_name);
 
-    void respond (message& msg);
+    void respond (tcp_message& msg);
 };
