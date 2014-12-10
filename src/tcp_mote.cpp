@@ -8,7 +8,7 @@ std::future<void> tcp_mote::connect (const int destination) {
         state_[destination] = TCP_STATE_CLOSED;
 
     if (state_[destination] == TCP_STATE_CLOSED) {
-        message msg;
+        tcp_message msg;
         {
             msg.flags &= TCP_NOFLAGS;
             msg.flags |= TCP_SYN;
@@ -33,7 +33,7 @@ std::future <void> tcp_mote::close (const int destination) {
         state_[destination] = TCP_STATE_CLOSED;
 
     if (state_[destination] != TCP_STATE_CLOSED) {
-        message msg;
+        tcp_message msg;
         {
             msg.flags &= TCP_NOFLAGS;
             msg.flags |= TCP_FIN;
@@ -54,7 +54,7 @@ std::future <void> tcp_mote::close (const int destination) {
 /**
  * Application Message Handlers
  */
-void tcp_mote::recv (message msg, const std::string event_name) {
+void tcp_mote::recv (tcp_message msg, const std::string event_name) {
     // last arg is a percentage from 0.0 to 1.0
     //create_interference (msg, 0.0);
     if (not_interfered (msg, 0/*0.0001*/))
@@ -76,7 +76,7 @@ void tcp_mote::recv (message msg, const std::string event_name) {
 }
 
 
-void tcp_mote::respond (message& msg) {
+void tcp_mote::respond (tcp_message& msg) {
 
     bool reset    = false;
     bool response = false;
@@ -85,7 +85,7 @@ void tcp_mote::respond (message& msg) {
         state_[msg.source] = TCP_STATE_CLOSED;
     }
 
-    message rst;
+    tcp_message rst;
     {
         rst.source = msg.dest;
         rst.dest   = msg.source;
@@ -195,7 +195,7 @@ void tcp_mote::respond (message& msg) {
 
 
 
-void tcp_mote::send (message msg, const int destination) {
+void tcp_mote::send (tcp_message msg, const int destination) {
     
     msg.next   = next_hop (destination);
     msg.prev   = uuid ();
@@ -213,9 +213,9 @@ void tcp_mote::send (message msg, const int destination) {
 }
 
 
-void tcp_mote::create_interference (message& msg, double probability) {
+void tcp_mote::create_interference (tcp_message& msg, double probability) {
     uint8_t* data = reinterpret_cast <uint8_t*> (&msg);
-    size_t   len  = sizeof (message);
+    size_t   len  = sizeof (tcp_message);
 
     std::random_device rd;
     std::default_random_engine e1 (rd ());   
@@ -230,7 +230,7 @@ void tcp_mote::create_interference (message& msg, double probability) {
     }
 }
 
-bool tcp_mote::not_interfered (message& msg, double probability) {
+bool tcp_mote::not_interfered (tcp_message& msg, double probability) {
     std::random_device rd;
     std::default_random_engine e1 (rd ());   
     std::uniform_int_distribution <uint32_t> dist (0, 0xFFFFFFFF);

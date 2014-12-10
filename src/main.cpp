@@ -2,6 +2,7 @@
 #include <future>
 #include <random>
 #include <tcp_mote.h>
+#include <udp_mote.h>
 
 // Seed with a real random value, if available
 
@@ -32,6 +33,7 @@ int main(int argc, char** argv)
     const int RADIO_STRENGTH = 50; // how far a sensor can communicate
 
     using mote_type = tcp_mote;
+    using pckt_type = tcp_message;
 
     std::vector <mote_type> motes (COUNT_MOTES);
 
@@ -56,32 +58,35 @@ int main(int argc, char** argv)
     for (int i = 0; i < motes.size (); i++)
     for (int j = 0; j < motes.size (); j++)
     {
+        pckt_type msg;
+        msg.data = "foo";
         motes[i].connect (motes[j].uuid ());
+        motes[i].send (msg, motes[j].uuid ());
         motes[i].close (motes[j].uuid ());
     }
     
 
  
 
-    std::vector <std::future<void>> jobs;
-    // send messages 
-    for (mote_type& a : motes)
-    for (mote_type& b : motes)
-    {
-        if (a.uuid () != b.uuid ())
-        {
-            message test;
+    // std::vector <std::future<void>> jobs;
+    // // send messages 
+    // for (mote_type& a : motes)
+    // for (mote_type& b : motes)
+    // {
+    //     if (a.uuid () != b.uuid ())
+    //     {
+    //         pckt_type test;
 
-            std::stringstream ss;
-            ss << "Hi " << b.uuid () << " I'm  " << a.uuid ();
+    //         std::stringstream ss;
+    //         ss << "Hi " << b.uuid () << " I'm  " << a.uuid ();
 
-            test.data = ss.str ();
+    //         test.data = ss.str ();
 
-            a.connect (b.uuid ());
-            a.close (b.uuid ());
-           // jobs.push_back (a.connect(b.uuid ()));
-        }
-    }
+    //         a.connect (b.uuid ());
+    //         a.close (b.uuid ());
+    //        // jobs.push_back (a.connect(b.uuid ()));
+    //     }
+    // }
 
     // for (auto& job : jobs) job.get ();
 

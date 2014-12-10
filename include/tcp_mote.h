@@ -2,8 +2,9 @@
 #include <future>
 #include <thread>
 #include <random>
-
 #include <mote.h>
+
+#include <header/tcp.h>
 
 enum tcp_flag {
     TCP_FIN = 0x01,
@@ -25,29 +26,13 @@ enum tcp_state {
 
 };
 
-struct transmission {
-    int next;
-    int prev;
-};
-
-struct tcp_header : public transmission {
-    uint16_t source;
-    uint16_t dest;
-
-    uint32_t seq;
-    uint32_t ack;
-
-    uint16_t flags;
-    uint16_t size;
-
-    uint16_t checksum;
-    uint16_t urgent;
-};
-
-struct message : public tcp_header {
+struct tcp_message : public tcp_header {
     std::string data;
 };
 
+namespace {
+    using message = tcp_message;
+}
 
 class tcp_mote : public mote <message>, public std::thread {
 private:

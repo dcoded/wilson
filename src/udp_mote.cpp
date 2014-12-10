@@ -6,13 +6,13 @@
 /**
  * Application Message Handlers
  */
-void udp_mote::recv (message msg, const std::string event_name) {
+void udp_mote::recv (udp_message msg, const std::string event_name) {
     // last arg is a percentage from 0.0 to 1.0
     //create_interference (msg, 0.0);
     if (not_interfered (msg, 0/*0.0001*/))
     {
         if (msg.dest == uuid () || msg.next == uuid ()) {
-            bytes_recv += sizeof (udp_lite_header) - sizeof (transmission);
+            bytes_recv += sizeof (udp_header) - sizeof (transmission);
             msgs_recv ++;
         }
 
@@ -29,7 +29,7 @@ void udp_mote::recv (message msg, const std::string event_name) {
 
 
 
-void udp_mote::send (message msg, const int destination) {
+void udp_mote::send (udp_message msg, const int destination) {
     msg.source = uuid ();
     msg.dest   = destination;
     msg.next   = next_hop (msg.dest);
@@ -38,16 +38,16 @@ void udp_mote::send (message msg, const int destination) {
     if (msg.next == -1) { // cant calculate path
 
     } else {
-        bytes_sent += sizeof (udp_lite_header) - sizeof (transmission);
+        bytes_sent += sizeof (udp_header) - sizeof (transmission);
         msgs_sent ++;
         publish (msg);
     }
 }
 
 
-void udp_mote::create_interference (message& msg, double probability) {
+void udp_mote::create_interference (udp_message& msg, double probability) {
     uint8_t* data = reinterpret_cast <uint8_t*> (&msg);
-    size_t   len  = sizeof (message);
+    size_t   len  = sizeof (udp_message);
 
     std::random_device rd;
     std::default_random_engine e1 (rd ());   
@@ -62,7 +62,7 @@ void udp_mote::create_interference (message& msg, double probability) {
     }
 }
 
-bool udp_mote::not_interfered (message& msg, double probability) {
+bool udp_mote::not_interfered (udp_message& msg, double probability) {
     std::random_device rd;
     std::default_random_engine e1 (rd ());   
     std::uniform_int_distribution <uint32_t> dist (0, 0xFFFFFFFF);
@@ -77,7 +77,15 @@ bool udp_mote::not_interfered (message& msg, double probability) {
 }
 
 
-std::future<void> udp_mote::test (message msg, const int destination) {
+std::future<void> udp_mote::test (udp_message msg, const int destination) {
     return std::async (std::launch::async, &udp_mote::send, this, msg, destination);
 }
 
+
+std::future <void> udp_mote::connect (int destination) {
+    return std::future <void> ();
+}
+
+std::future <void> udp_mote::close (int destination) {
+    return std::future <void> ();
+}
