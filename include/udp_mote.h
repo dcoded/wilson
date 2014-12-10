@@ -31,6 +31,8 @@ public:
     std::future <void> connect (int destination);
     std::future <void> close (int destination);
 
+    bool connected (const int destination);
+
 private:
     virtual void recv (const udp_message msg, const std::string event_name);
 };

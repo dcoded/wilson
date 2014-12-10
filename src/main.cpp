@@ -61,8 +61,11 @@ int main(int argc, char** argv)
         pckt_type msg;
         msg.data = "foo";
         motes[i].connect (motes[j].uuid ());
-        motes[i].send (msg, motes[j].uuid ());
-        motes[i].close (motes[j].uuid ());
+        
+        if (motes[i].connected (motes[j].uuid ())) {
+            motes[i].send (msg, motes[j].uuid ());
+            motes[i].close (motes[j].uuid ());
+        }
     }
     
 

@@ -64,14 +64,8 @@ void tcp_mote::recv (tcp_message msg, const std::string event_name) {
             msgs_recv ++;
         }
 
-        if (msg.dest == uuid ()) {
-
-            respond (msg);
-
-        }
-        else if (msg.next == uuid ()) {
-            send (msg, msg.dest);
-        }
+             if (msg.dest == uuid ()) respond (msg);
+        else if (msg.next == uuid ()) send (msg, msg.dest);
     }
 }
 
@@ -170,7 +164,7 @@ void tcp_mote::respond (tcp_message& msg) {
 
         case TCP_STATE_FIN_WAIT_2:
             if (msg.flags & TCP_FIN) {
-                std::cout << "[" << msg.source << ":" << uuid () << "] SENDER CLOSED\n";
+                std::cout << "[" << uuid () << ":" << msg.source << "] SENDER CLOSED\n";
                 state_[msg.source] = TCP_STATE_CLOSED;
 
                 std::swap (msg.source, msg.dest);
@@ -196,7 +190,6 @@ void tcp_mote::respond (tcp_message& msg) {
 
 
 void tcp_mote::send (tcp_message msg, const int destination) {
-    
     msg.next   = next_hop (destination);
     msg.prev   = uuid ();
     msg.dest   = destination;
@@ -242,4 +235,11 @@ bool tcp_mote::not_interfered (tcp_message& msg, double probability) {
             return false;
     }
     return true;
+}
+
+bool tcp_mote::connected (const int destination) {
+    if (state_.find (destination) == state_.end ())
+        return false;
+
+    return (state_[destination] == TCP_STATE_CLIENT_ESTABLISHED);
 }

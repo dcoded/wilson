@@ -89,3 +89,7 @@ std::future <void> udp_mote::connect (int destination) {
 std::future <void> udp_mote::close (int destination) {
     return std::future <void> ();
 }
+
+bool udp_mote::connected (const int destination) {
+    return true;
+}

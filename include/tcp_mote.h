@@ -53,6 +53,9 @@ public:
     std::future <void> connect (const int destination);
     std::future <void> close (const int destination);
 
+    bool connected (const int destination);
+
+
 private:
     virtual void recv (const message msg, const std::string event_name);
 
