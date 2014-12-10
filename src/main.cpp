@@ -6,6 +6,9 @@
 
 // Seed with a real random value, if available
 
+template <typename mote_type, typename pckt_type>
+void simulate (const int COUNT_MOTES, const int SPACE_SIZE, const int RADIO_STRENGTH);
+
 template <typename Iter>
 void init_network (const Iter& begin, const Iter& end, const int size);
 
@@ -20,6 +23,10 @@ void parallel_job (const Iter& begin, const Iter& end, Job fn);
 
 int main(int argc, char** argv)
 {
+    if (argc < 5) {
+        std::cout << "Usage: " << argv[0] << " { tcp | udp } <size> <motes> <radio strength>\n";
+        return 0;
+    }
     /*
         SIMULATION SETTINGS
 
@@ -28,14 +35,28 @@ int main(int argc, char** argv)
               likelyhood of an isolated node.
     */
     /** 10,5,4 showed that sent==recv */
-    const int SPACE_SIZE     = 150; // size of area sensors can be placed (NxN)
-    const int COUNT_MOTES    = 16; // # of sensors around
-    const int RADIO_STRENGTH = 50; // how far a sensor can communicate
+    const int SPACE_SIZE     = atoi (argv[2]); // size of area sensors can be placed (NxN)
+    const int COUNT_MOTES    = atoi (argv[3]); // # of sensors around
+    const int RADIO_STRENGTH = atoi (argv[4]); // how far a sensor can communicate
 
-    using mote_type = tcp_mote;
-    using pckt_type = tcp_message;
+
+    if (std::string(argv[1]) == std::string ("tcp")) {
+        std::cout << "Simulating TCP\n";
+        simulate <tcp_mote, tcp_message> (COUNT_MOTES, SPACE_SIZE, RADIO_STRENGTH);
+    } else {
+        std::cout << "Simulating UDP\n";
+        simulate <udp_mote, udp_message> (COUNT_MOTES, SPACE_SIZE, RADIO_STRENGTH);
+    }
+
+
+}
+
+
+template <typename mote_type, typename pckt_type>
+void simulate (const int COUNT_MOTES, const int SPACE_SIZE, const int RADIO_STRENGTH) {
 
     std::vector <mote_type> motes (COUNT_MOTES);
+
 
 
     // assign IDs/addresses & spatial locations
@@ -70,33 +91,6 @@ int main(int argc, char** argv)
             motes[i].close (motes[j].uuid ());
         }
     }
-    
-
- 
-
-    // std::vector <std::future<void>> jobs;
-    // // send messages 
-    // for (mote_type& a : motes)
-    // for (mote_type& b : motes)
-    // {
-    //     if (a.uuid () != b.uuid ())
-    //     {
-    //         pckt_type test;
-
-    //         std::stringstream ss;
-    //         ss << "Hi " << b.uuid () << " I'm  " << a.uuid ();
-
-    //         test.data = ss.str ();
-
-    //         a.connect (b.uuid ());
-    //         a.close (b.uuid ());
-    //        // jobs.push_back (a.connect(b.uuid ()));
-    //     }
-    // }
-
-    // for (auto& job : jobs) job.get ();
-
-
 
 
     // /*
@@ -114,18 +108,18 @@ int main(int argc, char** argv)
         msgs_recv += m.msgs_recv;
     }
 
-    std::cout << "Bytes Sent: " << bytes_sent << "\n";
-    std::cout << "Bytes Recv: " << bytes_recv << "\n";
-
+    std::cout << "Bytes Sent   : " << bytes_sent << "\n";
+    std::cout << "Bytes Recv   : " << bytes_recv << "\n";
+    std::cout << "\n";
     std::cout << "Messages Sent: " << msgs_sent << "\n";
     std::cout << "Messages Recv: " << msgs_recv << "\n";
     std::cout << "Connections  : " << connections << "\n";
+    std::cout << "\n";
+    std::cout << "Bytes / Conn : " << int (bytes_sent / connections) << " bytes per connection\n";
+    std::cout << "Avg. Distance: " << int (msgs_sent / connections)  << " hops per connection\n";
 
     std::cout << std::endl;
 }
-
-
-
 
 
 
